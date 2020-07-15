@@ -12,6 +12,8 @@ const manifest = require("./rollup-plugins/manifest-plugin");
 const worker = require("./rollup-plugins/worker-plugin");
 const dontHashPlugin = require("./rollup-plugins/dont-hash-plugin");
 const ignore = require("./rollup-plugins/ignore-plugin");
+const minifyHTML = require("rollup-plugin-minify-html-literals").default;
+const defaultShouldMinify = require("minify-html-literals").defaultShouldMinify;
 
 const bundle = require("./bundle");
 const paths = require("./paths");

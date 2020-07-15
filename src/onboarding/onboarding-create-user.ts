@@ -107,11 +107,11 @@ class OnboardingCreateUser extends LitElement {
         @value-changed=${this._handleValueChanged}
         required
         type='password'
-        .invalid=${
+        .invalid="${
           this._password !== "" &&
           this._passwordConfirm !== "" &&
           this._passwordConfirm !== this._password
-        }
+        }"
         .errorMessage="${this.localize(
           "ui.panel.page-onboarding.user.error.password_not_match"
         )}"
