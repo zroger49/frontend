@@ -59,6 +59,22 @@ const createRollupConfig = ({
           },
         }),
         json(),
+        minifyHTML({
+          options: {
+            shouldMinify(template) {
+              return (
+                defaultShouldMinify(template) ||
+                template.parts.some((part) => {
+                  // Matches Polymer templates that are not tagged
+                  return (
+                    part.text.includes("<style") ||
+                    part.text.includes("<dom-module")
+                  );
+                })
+              );
+            },
+          },
+        }),
         babel({
           ...bundle.babelOptions({ latestBuild }),
           extensions,
