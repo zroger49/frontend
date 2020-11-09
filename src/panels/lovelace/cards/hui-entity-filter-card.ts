@@ -4,7 +4,7 @@ import { evaluateFilter } from "../common/evaluate-filter";
 import { processConfigEntities } from "../common/process-config-entities";
 import { createCardElement } from "../create-element/create-card-element";
 import { EntityFilterEntityConfig } from "../entity-rows/types";
-import { LovelaceCard } from "../types";
+import { LovelaceCard, LovelaceCardEditor } from "../types";
 import { EntityFilterCardConfig } from "./types";
 import {
   property,
@@ -15,6 +15,17 @@ import {
 import { computeCardSize } from "../common/compute-card-size";
 
 class EntityFilterCard extends UpdatingElement implements LovelaceCard {
+  public static async getConfigElement(): Promise<LovelaceCardEditor> {
+    await import(
+      /* webpackChunkName: "hui-entity-filter-card-editor" */ "../editor/config-elements/hui-entity-filter-card-editor"
+    );
+    return document.createElement("hui-entity-filter-card-editor");
+  }
+
+  public static getStubConfig(): Record<string, unknown> {
+    return { entities: [], state_filter: [] };
+  }
+
   @property({ attribute: false }) public hass?: HomeAssistant;
 
   @property() public isPanel = false;
