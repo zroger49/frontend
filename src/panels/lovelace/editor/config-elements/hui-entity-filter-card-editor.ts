@@ -29,26 +29,23 @@ import {
   GUIModeChangedEvent,
 } from "../types";
 import "../card-editor/hui-card-picker";
-import "../hui-element-editor";
+import "../card-editor/hui-card-element-editor";
 import { HomeAssistant } from "../../../../types";
 import { LovelaceCardConfig, LovelaceConfig } from "../../../../data/lovelace";
 import { fireEvent, HASSDomEvent } from "../../../../common/dom/fire_event";
-import type {
-  ConfigChangedEvent,
-  HuiElementEditor,
-} from "../hui-element-editor";
+import type { ConfigChangedEvent } from "../hui-element-editor";
 import "../hui-entities-card-row-editor";
 import {
   EntityFilterEntityConfig,
   LovelaceRowConfig,
 } from "../../entity-rows/types";
 import { processEditorEntities } from "../process-editor-entities";
-import "../hui-detail-editor-base";
 import "../../components/hui-entity-editor";
 import "../../../../components/ha-formfield";
 import "../../../../components/ha-switch";
 import { configElementStyle } from "./config-elements-style";
 import { computeRTLDirection } from "../../../../common/util/compute_rtl";
+import type { HuiCardElementEditor } from "../card-editor/hui-card-element-editor";
 
 const cardConfigStruct = object({
   type: string(),
@@ -75,7 +72,8 @@ export class HuiEntityFilterCardEditor extends LitElement
 
   @internalProperty() private _configEntities?: LovelaceRowConfig[];
 
-  @query("hui-element-editor") private _cardEditorEl?: HuiElementEditor;
+  @query("hui-card-element-editor")
+  private _cardEditorEl?: HuiCardElementEditor;
 
   public setConfig(config: Readonly<EntityFilterCardConfig>): void {
     assert(config, cardConfigStruct);
@@ -209,13 +207,13 @@ export class HuiEntityFilterCardEditor extends LitElement
                 </mwc-icon-button>
               </div>
 
-              <hui-element-editor
+              <hui-card-element-editor
                 .hass=${this.hass}
                 .value=${this._getCardConfig()}
                 .lovelace=${this.lovelace}
                 @config-changed=${this._handleCardConfigChanged}
                 @GUImode-changed=${this._cardGUIModeChanged}
-              ></hui-element-editor>
+              ></hui-card-element-editor>
             `
           : html`
               <hui-card-picker
