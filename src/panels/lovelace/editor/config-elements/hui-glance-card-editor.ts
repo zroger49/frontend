@@ -61,10 +61,16 @@ export class HuiGlanceCardEditor extends LitElement
 
   @internalProperty() private _configEntities?: ConfigEntity[];
 
-  public setConfig(config: GlanceCardConfig): void {
+  @internalProperty() private _options?: Record<string, any>;
+
+  public setConfig(
+    config: GlanceCardConfig,
+    options: Record<string, any>
+  ): void {
     assert(config, cardConfigStruct);
     this._config = config;
     this._configEntities = processEditorEntities(config.entities);
+    this._options = options;
   }
 
   get _title(): string {
@@ -192,11 +198,15 @@ export class HuiGlanceCardEditor extends LitElement
           ></ha-switch>
         </ha-formfield>
       </div>
-      <hui-entity-editor
-        .hass=${this.hass}
-        .entities=${this._configEntities}
-        @entities-changed=${this._valueChanged}
-      ></hui-entity-editor>
+      ${this._options?.hide_entities
+        ? ""
+        : html`
+            <hui-entity-editor
+              .hass=${this.hass}
+              .entities=${this._configEntities}
+              @entities-changed=${this._valueChanged}
+            ></hui-entity-editor>
+          `}
     `;
   }
 

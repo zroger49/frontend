@@ -55,6 +55,8 @@ export abstract class HuiElementEditor<T> extends LitElement {
 
   @property({ attribute: false }) public lovelace?: LovelaceConfig;
 
+  @property({ attribute: false }) public options?: Record<string, any>;
+
   @internalProperty() private _yaml?: string;
 
   @internalProperty() private _config?: T;
@@ -295,7 +297,7 @@ export abstract class HuiElementEditor<T> extends LitElement {
 
       // Setup GUI editor and check that it can handle the current config
       try {
-        this._configElement!.setConfig(this.value);
+        this._configElement!.setConfig(this.value, this.options);
       } catch (err) {
         throw new GUISupportError(
           "Config is not supported",

@@ -55,10 +55,16 @@ export class HuiPictureGlanceCardEditor extends LitElement
 
   @internalProperty() private _configEntities?: EntityConfig[];
 
-  public setConfig(config: PictureGlanceCardConfig): void {
+  @internalProperty() private _options?: Record<string, any>;
+
+  public setConfig(
+    config: PictureGlanceCardConfig,
+    options: Record<string, any>
+  ): void {
     assert(config, cardConfigStruct);
     this._config = config;
     this._configEntities = processEditorEntities(config.entities);
+    this._options = options;
   }
 
   get _entity(): string {
@@ -214,11 +220,15 @@ export class HuiPictureGlanceCardEditor extends LitElement
             @value-changed="${this._valueChanged}"
           ></hui-action-editor>
         </div>
-        <hui-entity-editor
-          .hass=${this.hass}
-          .entities="${this._configEntities}"
-          @entities-changed="${this._valueChanged}"
-        ></hui-entity-editor>
+        ${this._options?.hide_entities
+          ? ""
+          : html`
+              <hui-entity-editor
+                .hass=${this.hass}
+                .entities="${this._configEntities}"
+                @entities-changed="${this._valueChanged}"
+              ></hui-entity-editor>
+            `}
         <hui-theme-select-editor
           .hass=${this.hass}
           .value="${this._theme}"

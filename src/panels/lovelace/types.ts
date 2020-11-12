@@ -70,7 +70,7 @@ export interface LovelaceHeaderFooter extends HTMLElement {
 }
 
 export interface LovelaceCardEditor extends LovelaceGenericElementEditor {
-  setConfig(config: LovelaceCardConfig): void;
+  setConfig(config: LovelaceCardConfig, options?: Record<string, any>): void;
 }
 
 export interface LovelaceHeaderFooterEditor
@@ -85,6 +85,6 @@ export interface LovelaceRowEditor extends LovelaceGenericElementEditor {
 export interface LovelaceGenericElementEditor extends HTMLElement {
   hass?: HomeAssistant;
   lovelace?: LovelaceConfig;
-  setConfig(config: any): void;
+  setConfig(config: any, options?: Record<string, any>): void;
   refreshYamlEditor?: (focus: boolean) => void;
 }

@@ -53,10 +53,16 @@ export class HuiHistoryGraphCardEditor extends LitElement
 
   @internalProperty() private _configEntities?: EntityConfig[];
 
-  public setConfig(config: HistoryGraphCardConfig): void {
+  @internalProperty() private _options?: Record<string, any>;
+
+  public setConfig(
+    config: HistoryGraphCardConfig,
+    options: Record<string, any>
+  ): void {
     assert(config, cardConfigStruct);
     this._config = config;
     this._configEntities = processEditorEntities(config.entities);
+    this._options = options;
   }
 
   get _entity(): string {
@@ -116,11 +122,15 @@ export class HuiHistoryGraphCardEditor extends LitElement
             @value-changed="${this._valueChanged}"
           ></paper-input>
         </div>
-        <hui-entity-editor
-          .hass=${this.hass}
-          .entities="${this._configEntities}"
-          @entities-changed="${this._valueChanged}"
-        ></hui-entity-editor>
+        ${this._options?.hide_entities
+          ? ""
+          : html`
+              <hui-entity-editor
+                .hass=${this.hass}
+                .entities="${this._configEntities}"
+                @entities-changed="${this._valueChanged}"
+              ></hui-entity-editor>
+            `}
       </div>
     `;
   }

@@ -45,10 +45,16 @@ export class HuiCalendarCardEditor extends LitElement
 
   @internalProperty() private _configEntities?: string[];
 
-  public setConfig(config: CalendarCardConfig): void {
+  @internalProperty() private _options?: Record<string, any>;
+
+  public setConfig(
+    config: CalendarCardConfig,
+    options: Record<string, any>
+  ): void {
     assert(config, cardConfigStruct);
     this._config = config;
     this._configEntities = config.entities;
+    this._options = options;
   }
 
   get _title(): string {
@@ -75,8 +81,8 @@ export class HuiCalendarCardEditor extends LitElement
             .label="${this.hass.localize(
               "ui.panel.lovelace.editor.card.generic.title"
             )} (${this.hass.localize(
-              "ui.panel.lovelace.editor.card.config.optional"
-            )})"
+      "ui.panel.lovelace.editor.card.config.optional"
+    )})"
             .value=${this._title}
             .configValue=${"title"}
             @value-changed=${this._valueChanged}
@@ -112,20 +118,29 @@ export class HuiCalendarCardEditor extends LitElement
           @value-changed=${this._valueChanged}
         ></hui-theme-select-editor>
       </div>
-      <h3>
-        ${this.hass.localize(
-          "ui.panel.lovelace.editor.card.calendar.calendar_entities"
-        ) +
-        " (" +
-        this.hass!.localize("ui.panel.lovelace.editor.card.config.required") +
-        ")"}
-      </h3>
-      <ha-entities-picker
-        .hass=${this.hass!}
-        .value=${this._configEntities}
-        .includeDomains=${["calendar"]}
-        @value-changed=${this._valueChanged}
-      >
+      ${
+        this._options?.hide_entities
+          ? ""
+          : html`
+              <h3>
+                ${this.hass.localize(
+                  "ui.panel.lovelace.editor.card.calendar.calendar_entities"
+                ) +
+                " (" +
+                this.hass!.localize(
+                  "ui.panel.lovelace.editor.card.config.required"
+                ) +
+                ")"}
+              </h3>
+              <ha-entities-picker
+                .hass=${this.hass!}
+                .value=${this._configEntities}
+                .includeDomains=${["calendar"]}
+                @value-changed=${this._valueChanged}
+              >
+              </ha-entities-picker>
+            `
+      }
       </ha-entities-picker>
     `;
   }

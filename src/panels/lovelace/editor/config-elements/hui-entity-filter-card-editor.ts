@@ -72,13 +72,19 @@ export class HuiEntityFilterCardEditor extends LitElement
 
   @internalProperty() private _configEntities?: LovelaceRowConfig[];
 
+  @internalProperty() private _options?: Record<string, any>;
+
   @query("hui-card-element-editor")
   private _cardEditorEl?: HuiCardElementEditor;
 
-  public setConfig(config: Readonly<EntityFilterCardConfig>): void {
+  public setConfig(
+    config: Readonly<EntityFilterCardConfig>,
+    options: Record<string, any>
+  ): void {
     assert(config, cardConfigStruct);
     this._config = config;
     this._configEntities = processEditorEntities(config.entities);
+    this._options = options;
   }
 
   protected render(): TemplateResult {
@@ -116,13 +122,17 @@ export class HuiEntityFilterCardEditor extends LitElement
 
   private _renderFilterEditor(): TemplateResult {
     return html`
-      <div class="entities">
-        <hui-entity-editor
-          .hass=${this.hass}
-          .entities=${this._configEntities}
-          @entities-changed=${this._entitiesChanged}
-        ></hui-entity-editor>
-      </div>
+      ${this._options?.hide_entities
+        ? ""
+        : html`
+            <div class="entities">
+              <hui-entity-editor
+                .hass=${this.hass}
+                .entities=${this._configEntities}
+                @entities-changed=${this._entitiesChanged}
+              ></hui-entity-editor>
+            </div>
+          `}
       <div class="states">
         <h3>
           ${this.hass!.localize(
@@ -213,6 +223,7 @@ export class HuiEntityFilterCardEditor extends LitElement
                 .lovelace=${this.lovelace}
                 @config-changed=${this._handleCardConfigChanged}
                 @GUImode-changed=${this._cardGUIModeChanged}
+                .options=${{ hide_entities: true }}
               ></hui-card-element-editor>
             `
           : html`
@@ -307,7 +318,7 @@ export class HuiEntityFilterCardEditor extends LitElement
 
   private _getCardConfig(): LovelaceCardConfig {
     const cardConfig = { ...this._config!.card } as LovelaceCardConfig;
-    cardConfig.entities = ["auto"];
+    cardConfig.entities = [];
     return cardConfig;
   }
 

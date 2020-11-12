@@ -56,12 +56,15 @@ export class HuiMapCardEditor extends LitElement implements LovelaceCardEditor {
 
   @internalProperty() private _configEntities?: EntityConfig[];
 
-  public setConfig(config: MapCardConfig): void {
+  @internalProperty() private _options?: Record<string, any>;
+
+  public setConfig(config: MapCardConfig, options: Record<string, any>): void {
     assert(config, cardConfigStruct);
     this._config = config;
     this._configEntities = config.entities
       ? processEditorEntities(config.entities)
       : [];
+    this._options = options;
   }
 
   get _title(): string {
@@ -153,11 +156,15 @@ export class HuiMapCardEditor extends LitElement implements LovelaceCardEditor {
             @value-changed="${this._valueChanged}"
           ></paper-input>
         </div>
-        <hui-entity-editor
-          .hass=${this.hass}
-          .entities="${this._configEntities}"
-          @entities-changed="${this._entitiesValueChanged}"
-        ></hui-entity-editor>
+        ${this._options?.hide_entities
+          ? ""
+          : html`
+              <hui-entity-editor
+                .hass=${this.hass}
+                .entities="${this._configEntities}"
+                @entities-changed="${this._entitiesValueChanged}"
+              ></hui-entity-editor>
+            `}
         <h3>
           ${this.hass.localize(
             "ui.panel.lovelace.editor.card.map.geo_location_sources"

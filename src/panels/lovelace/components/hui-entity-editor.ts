@@ -53,10 +53,6 @@ export class HuiEntityEditor extends LitElement {
       return html``;
     }
 
-    if (this.entities.length === 1 && this.entities[0].entity === "auto") {
-      return html``;
-    }
-
     return html`
       <h3>
         ${this.label ||

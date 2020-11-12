@@ -68,10 +68,16 @@ export class HuiEntitiesCardEditor extends LitElement
 
   @internalProperty() private _subElementEditorConfig?: SubElementEditorConfig;
 
-  public setConfig(config: EntitiesCardConfig): void {
+  @internalProperty() private _options?: Record<string, any>;
+
+  public setConfig(
+    config: EntitiesCardConfig,
+    options: Record<string, any>
+  ): void {
     assert(config, cardConfigStruct);
     this._config = config;
     this._configEntities = processEditorEntities(config.entities);
+    this._options = options;
   }
 
   get _title(): string {
@@ -158,12 +164,16 @@ export class HuiEntitiesCardEditor extends LitElement
           @edit-detail-element=${this._editDetailElement}
         ></hui-header-footer-editor>
       </div>
-      <hui-entities-card-row-editor
-        .hass=${this.hass}
-        .entities=${this._configEntities}
-        @entities-changed=${this._valueChanged}
-        @edit-detail-element=${this._editDetailElement}
-      ></hui-entities-card-row-editor>
+      ${this._options?.hide_entities
+        ? ``
+        : html`
+            <hui-entities-card-row-editor
+              .hass=${this.hass}
+              .entities=${this._configEntities}
+              @entities-changed=${this._valueChanged}
+              @edit-detail-element=${this._editDetailElement}
+            ></hui-entities-card-row-editor>
+          `}
     `;
   }
 
