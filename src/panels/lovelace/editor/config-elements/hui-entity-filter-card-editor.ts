@@ -10,8 +10,8 @@ import {
   query,
 } from "lit-element";
 import { mdiClose, mdiDelete } from "@mdi/js";
-import "@polymer/paper-tabs";
-import "@polymer/paper-tabs/paper-tab";
+import "@material/mwc-tab-bar/mwc-tab-bar";
+import "@material/mwc-tab/mwc-tab";
 import {
   any,
   array,
@@ -95,21 +95,21 @@ export class HuiEntityFilterCardEditor extends LitElement
     return html`
       <div class="card-config">
         <div class="toolbar">
-          <paper-tabs
-            .selected=${this._selectedTab}
-            @iron-activate=${this._handleSwitchTab}
+          <mwc-tab-bar
+            .activeIndex=${this._selectedTab}
+            @MDCTabBar:activated=${this._handleSwitchTab}
           >
-            <paper-tab
-              >${this.hass!.localize(
+            <mwc-tab
+              .label=${this.hass!.localize(
                 "ui.panel.lovelace.editor.card.entity_filter.entities"
-              )}</paper-tab
-            >
-            <paper-tab
-              >${this.hass!.localize(
+              )}
+            ></mwc-tab>
+            <mwc-tab
+              .label=${this.hass!.localize(
                 "ui.panel.lovelace.editor.card.entity_filter.card"
-              )}</paper-tab
-            >
-          </paper-tabs>
+              )}
+            ></mwc-tab>
+          </mwc-tab-bar>
         </div>
         <div id="editor">
           ${this._selectedTab === 0
@@ -238,7 +238,7 @@ export class HuiEntityFilterCardEditor extends LitElement
   }
 
   private _handleSwitchTab(ev) {
-    this._selectedTab = parseInt(ev.detail.selected, 10);
+    this._selectedTab = parseInt(ev.detail.index, 10);
   }
 
   private _showEmptyToggle(): void {
