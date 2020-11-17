@@ -360,9 +360,7 @@ export class HuiEntityFilterCardEditor extends LitElement
     return [
       configElementStyle,
       css`
-        paper-tabs {
-          --paper-tabs-selection-bar-color: var(--primary-color);
-          --paper-tab-ink: var(--primary-color);
+        mwc-tab-bar {
           border-bottom: 1px solid var(--divider-color);
         }
 
