@@ -23,7 +23,7 @@ import { HistoryGraphCardConfig } from "../../cards/types";
 import { EntityId } from "../../common/structs/is-entity-id";
 import "../../components/hui-entity-editor";
 import { EntityConfig } from "../../entity-rows/types";
-import { LovelaceCardEditor } from "../../types";
+import { LovelaceCardEditor, LovelaceEditorOptions } from "../../types";
 import { processEditorEntities } from "../process-editor-entities";
 import { EditorTarget, EntitiesEditorEvent } from "../types";
 import { configElementStyle } from "./config-elements-style";
@@ -49,20 +49,16 @@ export class HuiHistoryGraphCardEditor extends LitElement
   implements LovelaceCardEditor {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
+  @property({ attribute: false }) public editorOptions?: LovelaceEditorOptions;
+
   @internalProperty() private _config?: HistoryGraphCardConfig;
 
   @internalProperty() private _configEntities?: EntityConfig[];
 
-  @internalProperty() private _options?: Record<string, any>;
-
-  public setConfig(
-    config: HistoryGraphCardConfig,
-    options: Record<string, any>
-  ): void {
+  public setConfig(config: HistoryGraphCardConfig): void {
     assert(config, cardConfigStruct);
     this._config = config;
     this._configEntities = processEditorEntities(config.entities);
-    this._options = options;
   }
 
   get _entity(): string {
@@ -122,7 +118,7 @@ export class HuiHistoryGraphCardEditor extends LitElement
             @value-changed="${this._valueChanged}"
           ></paper-input>
         </div>
-        ${this._options?.hide_entities
+        ${this.editorOptions?.hide_entities
           ? ""
           : html`
               <hui-entity-editor

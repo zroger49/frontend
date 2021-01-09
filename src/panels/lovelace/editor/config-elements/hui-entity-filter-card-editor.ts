@@ -22,7 +22,7 @@ import {
   boolean,
 } from "superstruct";
 import { EntityFilterCardConfig } from "../../cards/types";
-import { LovelaceCardEditor } from "../../types";
+import { LovelaceCardEditor, LovelaceEditorOptions } from "../../types";
 import {
   entitiesConfigStruct,
   EntitiesEditorEvent,
@@ -62,6 +62,8 @@ export class HuiEntityFilterCardEditor extends LitElement
 
   @property({ attribute: false }) public lovelace?: LovelaceConfig;
 
+  @property({ attribute: false }) public editorOptions?: LovelaceEditorOptions;
+
   @internalProperty() private _config?: EntityFilterCardConfig;
 
   @internalProperty() private _selectedTab = 0;
@@ -72,19 +74,13 @@ export class HuiEntityFilterCardEditor extends LitElement
 
   @internalProperty() private _configEntities?: LovelaceRowConfig[];
 
-  @internalProperty() private _options?: Record<string, any>;
-
   @query("hui-card-element-editor")
   private _cardEditorEl?: HuiCardElementEditor;
 
-  public setConfig(
-    config: Readonly<EntityFilterCardConfig>,
-    options: Record<string, any>
-  ): void {
+  public setConfig(config: Readonly<EntityFilterCardConfig>): void {
     assert(config, cardConfigStruct);
     this._config = config;
     this._configEntities = processEditorEntities(config.entities);
-    this._options = options;
   }
 
   protected render(): TemplateResult {
@@ -122,7 +118,7 @@ export class HuiEntityFilterCardEditor extends LitElement
 
   private _renderFilterEditor(): TemplateResult {
     return html`
-      ${this._options?.hide_entities
+      ${this.editorOptions?.hide_entities
         ? ""
         : html`
             <div class="entities">
@@ -223,7 +219,7 @@ export class HuiEntityFilterCardEditor extends LitElement
                 .lovelace=${this.lovelace}
                 @config-changed=${this._handleCardConfigChanged}
                 @GUImode-changed=${this._cardGUIModeChanged}
-                .options=${{ hide_entities: true }}
+                .editorOptions=${{ hide_entities: true }}
               ></hui-card-element-editor>
             `
           : html`

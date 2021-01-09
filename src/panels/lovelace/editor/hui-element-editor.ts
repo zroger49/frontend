@@ -25,7 +25,10 @@ import type { HomeAssistant } from "../../../types";
 import { handleStructError } from "../common/structs/handle-errors";
 import type { LovelaceRowConfig } from "../entity-rows/types";
 import { LovelaceHeaderFooterConfig } from "../header-footer/types";
-import type { LovelaceGenericElementEditor } from "../types";
+import type {
+  LovelaceEditorOptions,
+  LovelaceGenericElementEditor,
+} from "../types";
 import "./config-elements/hui-generic-entity-row-editor";
 import { GUISupportError } from "./gui-support-error";
 import { EditSubElementEvent, GUIModeChangedEvent } from "./types";
@@ -55,7 +58,7 @@ export abstract class HuiElementEditor<T> extends LitElement {
 
   @property({ attribute: false }) public lovelace?: LovelaceConfig;
 
-  @property({ attribute: false }) public options?: Record<string, any>;
+  @property({ attribute: false }) public editorOptions?: LovelaceEditorOptions;
 
   @internalProperty() private _yaml?: string;
 
@@ -297,7 +300,8 @@ export abstract class HuiElementEditor<T> extends LitElement {
 
       // Setup GUI editor and check that it can handle the current config
       try {
-        this._configElement!.setConfig(this.value, this.options);
+        this._configElement!.setConfig(this.value);
+        this._configElement!.editorOptions = this.editorOptions;
       } catch (err) {
         throw new GUISupportError(
           "Config is not supported",

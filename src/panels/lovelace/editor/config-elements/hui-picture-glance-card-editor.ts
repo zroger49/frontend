@@ -21,7 +21,7 @@ import "../../components/hui-action-editor";
 import "../../components/hui-entity-editor";
 import "../../components/hui-theme-select-editor";
 import { EntityConfig } from "../../entity-rows/types";
-import { LovelaceCardEditor } from "../../types";
+import { LovelaceCardEditor, LovelaceEditorOptions } from "../../types";
 import { processEditorEntities } from "../process-editor-entities";
 import {
   actionConfigStruct,
@@ -51,20 +51,16 @@ export class HuiPictureGlanceCardEditor extends LitElement
   implements LovelaceCardEditor {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
+  @property({ attribute: false }) public editorOptions?: LovelaceEditorOptions;
+
   @internalProperty() private _config?: PictureGlanceCardConfig;
 
   @internalProperty() private _configEntities?: EntityConfig[];
 
-  @internalProperty() private _options?: Record<string, any>;
-
-  public setConfig(
-    config: PictureGlanceCardConfig,
-    options: Record<string, any>
-  ): void {
+  public setConfig(config: PictureGlanceCardConfig): void {
     assert(config, cardConfigStruct);
     this._config = config;
     this._configEntities = processEditorEntities(config.entities);
-    this._options = options;
   }
 
   get _entity(): string {
@@ -220,7 +216,7 @@ export class HuiPictureGlanceCardEditor extends LitElement
             @value-changed="${this._valueChanged}"
           ></hui-action-editor>
         </div>
-        ${this._options?.hide_entities
+        ${this.editorOptions?.hide_entities
           ? ""
           : html`
               <hui-entity-editor

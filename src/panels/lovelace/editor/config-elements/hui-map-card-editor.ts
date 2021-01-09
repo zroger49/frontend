@@ -28,7 +28,7 @@ import { MapCardConfig } from "../../cards/types";
 import "../../components/hui-entity-editor";
 import "../../components/hui-input-list-editor";
 import { EntityConfig } from "../../entity-rows/types";
-import { LovelaceCardEditor } from "../../types";
+import { LovelaceCardEditor, LovelaceEditorOptions } from "../../types";
 import { processEditorEntities } from "../process-editor-entities";
 import {
   EditorTarget,
@@ -52,19 +52,18 @@ const cardConfigStruct = object({
 export class HuiMapCardEditor extends LitElement implements LovelaceCardEditor {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
+  @property({ attribute: false }) public editorOptions?: LovelaceEditorOptions;
+
   @internalProperty() private _config?: MapCardConfig;
 
   @internalProperty() private _configEntities?: EntityConfig[];
 
-  @internalProperty() private _options?: Record<string, any>;
-
-  public setConfig(config: MapCardConfig, options: Record<string, any>): void {
+  public setConfig(config: MapCardConfig): void {
     assert(config, cardConfigStruct);
     this._config = config;
     this._configEntities = config.entities
       ? processEditorEntities(config.entities)
       : [];
-    this._options = options;
   }
 
   get _title(): string {
@@ -156,7 +155,7 @@ export class HuiMapCardEditor extends LitElement implements LovelaceCardEditor {
             @value-changed="${this._valueChanged}"
           ></paper-input>
         </div>
-        ${this._options?.hide_entities
+        ${this.editorOptions?.hide_entities
           ? ""
           : html`
               <hui-entity-editor

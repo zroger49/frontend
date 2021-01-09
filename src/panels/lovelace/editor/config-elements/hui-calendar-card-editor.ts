@@ -22,7 +22,7 @@ import type { HomeAssistant } from "../../../../types";
 import type { CalendarCardConfig } from "../../cards/types";
 import "../../components/hui-entity-editor";
 import "../../components/hui-theme-select-editor";
-import type { LovelaceCardEditor } from "../../types";
+import type { LovelaceCardEditor, LovelaceEditorOptions } from "../../types";
 import type { EditorTarget, EntitiesEditorEvent } from "../types";
 import { configElementStyle } from "./config-elements-style";
 
@@ -41,20 +41,16 @@ export class HuiCalendarCardEditor extends LitElement
   implements LovelaceCardEditor {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
+  @property({ attribute: false }) public editorOptions?: LovelaceEditorOptions;
+
   @property({ attribute: false }) private _config?: CalendarCardConfig;
 
   @internalProperty() private _configEntities?: string[];
 
-  @internalProperty() private _options?: Record<string, any>;
-
-  public setConfig(
-    config: CalendarCardConfig,
-    options: Record<string, any>
-  ): void {
+  public setConfig(config: CalendarCardConfig): void {
     assert(config, cardConfigStruct);
     this._config = config;
     this._configEntities = config.entities;
-    this._options = options;
   }
 
   get _title(): string {
@@ -119,7 +115,7 @@ export class HuiCalendarCardEditor extends LitElement
         ></hui-theme-select-editor>
       </div>
       ${
-        this._options?.hide_entities
+        this.editorOptions?.hide_entities
           ? ""
           : html`
               <h3>
