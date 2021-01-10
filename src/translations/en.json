@@ -2645,7 +2645,7 @@
               "card": "Card",
               "delete_state": "Delete state",
               "entities": "Entities",
-              "show_empty": "Display when empty",
+              "show_empty": "Display card when empty",
               "states": "Matching states"
             },
             "button": {
