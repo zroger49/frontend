@@ -226,7 +226,7 @@ export class HuiEntityFilterCardEditor extends LitElement
               <hui-card-picker
                 .hass=${this.hass}
                 .lovelace=${this.lovelace}
-                @config-changed="${this._pickCard}"
+                @config-changed=${this._pickCard}
               ></hui-card-picker>
             `}
       </div>

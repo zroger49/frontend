@@ -90,9 +90,9 @@ export class HuiHistoryGraphCardEditor extends LitElement
           )} (${this.hass.localize(
             "ui.panel.lovelace.editor.card.config.optional"
           )})"
-          .value="${this._title}"
-          .configValue="${"title"}"
-          @value-changed="${this._valueChanged}"
+          .value=${this._title}
+          .configValue=${"title"}
+          @value-changed=${this._valueChanged}
         ></paper-input>
         <div class="side-by-side">
           <paper-input
@@ -102,9 +102,9 @@ export class HuiHistoryGraphCardEditor extends LitElement
             )} (${this.hass.localize(
               "ui.panel.lovelace.editor.card.config.optional"
             )})"
-            .value="${this._hours_to_show}"
+            .value=${this._hours_to_show}
             .configValue=${"hours_to_show"}
-            @value-changed="${this._valueChanged}"
+            @value-changed=${this._valueChanged}
           ></paper-input>
           <paper-input
             type="number"
@@ -113,9 +113,9 @@ export class HuiHistoryGraphCardEditor extends LitElement
             )} (${this.hass.localize(
               "ui.panel.lovelace.editor.card.config.optional"
             )})"
-            .value="${this._refresh_interval}"
+            .value=${this._refresh_interval}
             .configValue=${"refresh_interval"}
-            @value-changed="${this._valueChanged}"
+            @value-changed=${this._valueChanged}
           ></paper-input>
         </div>
         ${this.editorOptions?.hide_entities
@@ -123,8 +123,8 @@ export class HuiHistoryGraphCardEditor extends LitElement
           : html`
               <hui-entity-editor
                 .hass=${this.hass}
-                .entities="${this._configEntities}"
-                @entities-changed="${this._valueChanged}"
+                .entities=${this._configEntities}
+                @entities-changed=${this._valueChanged}
               ></hui-entity-editor>
             `}
       </div>
