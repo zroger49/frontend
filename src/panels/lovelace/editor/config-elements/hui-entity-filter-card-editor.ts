@@ -176,6 +176,7 @@ export class HuiEntityFilterCardEditor extends LitElement
   }
 
   private _renderCardEditor(): TemplateResult {
+    const editorOptions = { hide_entities: true };
     return html`
       <div class="card">
         <ha-formfield
@@ -219,7 +220,7 @@ export class HuiEntityFilterCardEditor extends LitElement
                 .lovelace=${this.lovelace}
                 @config-changed=${this._handleCardConfigChanged}
                 @GUImode-changed=${this._cardGUIModeChanged}
-                .editorOptions=${{ hide_entities: true }}
+                .editorOptions=${editorOptions}
               ></hui-card-element-editor>
             `
           : html`
