@@ -156,6 +156,9 @@ export class HuiAreaCard
       return true;
     }
 
+    if (!changedProps.has("hass")) {
+    	return false;
+    }
     const oldHass = changedProps.get("hass") as HomeAssistant | undefined;
 
     if (
@@ -238,7 +241,7 @@ export class HuiAreaCard
         <div class="container">
           <div class="sensors">
             ${dialogEntities.map((entityConf) => {
-              const stateObj = this.hass!.states[entityConf.entity];
+              const stateObj = this.hass.states[entityConf.entity];
               return html`
                 <span>
                   <ha-icon
