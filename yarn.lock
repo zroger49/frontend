@@ -2126,6 +2126,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@material/drawer@npm:=14.0.0-canary.353ca7e9f.0":
+  version: 14.0.0-canary.353ca7e9f.0
+  resolution: "@material/drawer@npm:14.0.0-canary.353ca7e9f.0"
+  dependencies:
+    "@material/animation": 14.0.0-canary.353ca7e9f.0
+    "@material/base": 14.0.0-canary.353ca7e9f.0
+    "@material/dom": 14.0.0-canary.353ca7e9f.0
+    "@material/elevation": 14.0.0-canary.353ca7e9f.0
+    "@material/feature-targeting": 14.0.0-canary.353ca7e9f.0
+    "@material/list": 14.0.0-canary.353ca7e9f.0
+    "@material/ripple": 14.0.0-canary.353ca7e9f.0
+    "@material/rtl": 14.0.0-canary.353ca7e9f.0
+    "@material/shape": 14.0.0-canary.353ca7e9f.0
+    "@material/theme": 14.0.0-canary.353ca7e9f.0
+    "@material/typography": 14.0.0-canary.353ca7e9f.0
+    tslib: ^2.1.0
+  checksum: 7e49e7e4477db7b05969d48fb55a73663db083bd435a26ffdbbf7fe2c5f81ebc25567295167d2e8a8a72bebbb041fb16f19397437f7ec1a6f5bf96e2f2259f8a
+  languageName: node
+  linkType: hard
+
 "@material/elevation@npm:14.0.0-canary.353ca7e9f.0":
   version: 14.0.0-canary.353ca7e9f.0
   resolution: "@material/elevation@npm:14.0.0-canary.353ca7e9f.0"
@@ -2340,6 +2360,20 @@ __metadata:
     tslib: ^2.0.1
     wicg-inert: ^3.0.0
   checksum: f2e9733ba5fac758f78ac0356de4570ae24cf229f7a07118eeb307fabb871541d1a027a43088c9dae2682390c613fec0dc24a5c71f0d9884a98ffcec9ded83a1
+  languageName: node
+  linkType: hard
+
+"@material/mwc-drawer@npm:^0.25.2":
+  version: 0.25.2
+  resolution: "@material/mwc-drawer@npm:0.25.2"
+  dependencies:
+    "@material/drawer": =14.0.0-canary.353ca7e9f.0
+    "@material/mwc-base": ^0.25.2
+    blocking-elements: ^0.1.0
+    lit: ^2.0.0
+    tslib: ^2.0.1
+    wicg-inert: ^3.0.0
+  checksum: ba4e215ecf21a8716318bfa0309ab6f02fb492ad446fd1173cf8f24b886869ecc406d05d5998b3f84c73f8231fef01853512f2fba2aa2ac36e4fcf59daa5b636
   languageName: node
   linkType: hard
 
@@ -9071,6 +9105,7 @@ fsevents@^1.2.7:
     "@material/mwc-checkbox": 0.25.2
     "@material/mwc-circular-progress": 0.25.2
     "@material/mwc-dialog": 0.25.2
+    "@material/mwc-drawer": ^0.25.2
     "@material/mwc-fab": 0.25.2
     "@material/mwc-formfield": 0.25.2
     "@material/mwc-icon-button": 0.25.2
