@@ -1,21 +1,47 @@
 import {
-  mdiAirHumidifierOff,
+  mdiAccount,
+  mdiAccountArrowRight,
   mdiAirHumidifier,
-  mdiLockOpen,
+  mdiAirHumidifierOff,
+  mdiBluetooth,
+  mdiBluetoothConnect,
+  mdiCalendar,
+  mdiCast,
+  mdiCastConnected,
+  mdiCastOff,
+  mdiChartSankey,
+  mdiCheckCircleOutline,
+  mdiClock,
+  mdiCloseCircleOutline,
+  mdiGestureTapButton,
+  mdiLanConnect,
+  mdiLanDisconnect,
+  mdiLock,
   mdiLockAlert,
   mdiLockClock,
-  mdiLock,
-  mdiCastConnected,
-  mdiCast,
-  mdiEmoticonDead,
-  mdiSleep,
-  mdiTimerSand,
-  mdiZWave,
-  mdiClock,
-  mdiCalendar,
+  mdiLockOpen,
+  mdiPackage,
+  mdiPackageDown,
+  mdiPackageUp,
+  mdiPowerPlug,
+  mdiPowerPlugOff,
+  mdiRestart,
+  mdiSpeaker,
+  mdiSpeakerOff,
+  mdiSpeakerPause,
+  mdiSpeakerPlay,
+  mdiSwapHorizontal,
+  mdiTelevision,
+  mdiTelevisionOff,
+  mdiTelevisionPause,
+  mdiTelevisionPlay,
+  mdiToggleSwitchVariant,
+  mdiToggleSwitchVariantOff,
   mdiWeatherNight,
 } from "@mdi/js";
 import { HassEntity } from "home-assistant-js-websocket";
+import { UpdateEntity, updateIsInstalling } from "../../data/update";
+import { weatherIcon } from "../../data/weather";
 /**
  * Return the icon to be used for a domain.
  *
@@ -32,6 +58,20 @@ export const domainIcon = (
   stateObj?: HassEntity,
   state?: string
 ): string => {
+  const icon = domainIconWithoutDefault(domain, stateObj, state);
+  if (icon) {
+    return icon;
+  }
+  // eslint-disable-next-line
+  console.warn(`Unable to find icon for domain ${domain}`);
+  return DEFAULT_DOMAIN_ICON;
+};
+
+export const domainIconWithoutDefault = (
+  domain: string,
+  stateObj?: HassEntity,
+  state?: string
+): string | undefined => {
   const compareState = state !== undefined ? state : stateObj?.state;
 
   switch (domain) {
@@ -41,11 +81,46 @@ export const domainIcon = (
     case "binary_sensor":
       return binarySensorIcon(compareState, stateObj);
 
+    case "button":
+      switch (stateObj?.attributes.device_class) {
+        case "restart":
+          return mdiRestart;
+        case "update":
+          return mdiPackageUp;
+        default:
+          return mdiGestureTapButton;
+      }
+
     case "cover":
       return coverIcon(compareState, stateObj);
 
+    case "device_tracker":
+      if (stateObj?.attributes.source_type === "router") {
+        return compareState === "home" ? mdiLanConnect : mdiLanDisconnect;
+      }
+      if (
+        ["bluetooth", "bluetooth_le"].includes(stateObj?.attributes.source_type)
+      ) {
+        return compareState === "home" ? mdiBluetoothConnect : mdiBluetooth;
+      }
+      return compareState === "not_home" ? mdiAccountArrowRight : mdiAccount;
+
     case "humidifier":
       return state && state === "off" ? mdiAirHumidifierOff : mdiAirHumidifier;
+
+    case "input_boolean":
+      return compareState === "on"
+        ? mdiCheckCircleOutline
+        : mdiCloseCircleOutline;
+
+    case "input_datetime":
+      if (!stateObj?.attributes.has_date) {
+        return mdiClock;
+      }
+      if (!stateObj.attributes.has_time) {
+        return mdiCalendar;
+      }
+      break;
 
     case "lock":
       switch (compareState) {
@@ -61,18 +136,51 @@ export const domainIcon = (
       }
 
     case "media_player":
-      return compareState === "playing" ? mdiCastConnected : mdiCast;
-
-    case "zwave":
-      switch (compareState) {
-        case "dead":
-          return mdiEmoticonDead;
-        case "sleeping":
-          return mdiSleep;
-        case "initializing":
-          return mdiTimerSand;
+      switch (stateObj?.attributes.device_class) {
+        case "speaker":
+          switch (compareState) {
+            case "playing":
+              return mdiSpeakerPlay;
+            case "paused":
+              return mdiSpeakerPause;
+            case "off":
+              return mdiSpeakerOff;
+            default:
+              return mdiSpeaker;
+          }
+        case "tv":
+          switch (compareState) {
+            case "playing":
+              return mdiTelevisionPlay;
+            case "paused":
+              return mdiTelevisionPause;
+            case "off":
+              return mdiTelevisionOff;
+            default:
+              return mdiTelevision;
+          }
         default:
-          return mdiZWave;
+          switch (compareState) {
+            case "playing":
+            case "paused":
+              return mdiCastConnected;
+            case "off":
+              return mdiCastOff;
+            default:
+              return mdiCast;
+          }
+      }
+
+    case "switch":
+      switch (stateObj?.attributes.device_class) {
+        case "outlet":
+          return compareState === "on" ? mdiPowerPlug : mdiPowerPlugOff;
+        case "switch":
+          return compareState === "on"
+            ? mdiToggleSwitchVariant
+            : mdiToggleSwitchVariantOff;
+        default:
+          return mdiToggleSwitchVariant;
       }
 
     case "sensor": {
@@ -84,26 +192,31 @@ export const domainIcon = (
       break;
     }
 
-    case "input_datetime":
-      if (!stateObj?.attributes.has_date) {
-        return mdiClock;
-      }
-      if (!stateObj.attributes.has_time) {
-        return mdiCalendar;
-      }
-      break;
-
     case "sun":
       return stateObj?.state === "above_horizon"
         ? FIXED_DOMAIN_ICONS[domain]
         : mdiWeatherNight;
+
+    case "switch_as_x":
+      return mdiSwapHorizontal;
+
+    case "threshold":
+      return mdiChartSankey;
+
+    case "update":
+      return compareState === "on"
+        ? updateIsInstalling(stateObj as UpdateEntity)
+          ? mdiPackageDown
+          : mdiPackageUp
+        : mdiPackage;
+
+    case "weather":
+      return weatherIcon(stateObj?.state);
   }
 
   if (domain in FIXED_DOMAIN_ICONS) {
     return FIXED_DOMAIN_ICONS[domain];
   }
 
-  // eslint-disable-next-line
-  console.warn(`Unable to find icon for domain ${domain}`);
-  return DEFAULT_DOMAIN_ICON;
+  return undefined;
 };

@@ -11,14 +11,7 @@ import listPlugin from "@fullcalendar/list";
 // @ts-ignore
 import listStyle from "@fullcalendar/list/main.css";
 import "@material/mwc-button";
-import {
-  mdiChevronLeft,
-  mdiChevronRight,
-  mdiViewAgenda,
-  mdiViewDay,
-  mdiViewModule,
-  mdiViewWeek,
-} from "@mdi/js";
+import { mdiViewAgenda, mdiViewDay, mdiViewModule, mdiViewWeek } from "@mdi/js";
 import {
   css,
   CSSResultGroup,
@@ -33,8 +26,10 @@ import memoize from "memoize-one";
 import { useAmPm } from "../../common/datetime/use_am_pm";
 import { fireEvent } from "../../common/dom/fire_event";
 import "../../components/ha-button-toggle-group";
-import "../../components/ha-icon-button";
+import "../../components/ha-icon-button-prev";
+import "../../components/ha-icon-button-next";
 import { haStyle } from "../../resources/styles";
+import { computeRTLDirection } from "../../common/util/compute_rtl";
 import type {
   CalendarEvent,
   CalendarViewChanged,
@@ -42,6 +37,7 @@ import type {
   HomeAssistant,
   ToggleButton,
 } from "../../types";
+import { firstWeekdayIndex } from "../../common/datetime/first_weekday";
 
 declare global {
   interface HTMLElementTagNameMap {
@@ -124,46 +120,43 @@ export class HAFullCalendar extends LitElement {
                           "ui.components.calendar.today"
                         )}</mwc-button
                       >
-                      <ha-icon-button
+                      <ha-icon-button-prev
                         .label=${this.hass.localize("ui.common.previous")}
-                        .path=${mdiChevronLeft}
                         class="prev"
                         @click=${this._handlePrev}
                       >
-                      </ha-icon-button>
-                      <ha-icon-button
+                      </ha-icon-button-prev>
+                      <ha-icon-button-next
                         .label=${this.hass.localize("ui.common.next")}
-                        .path=${mdiChevronRight}
                         class="next"
                         @click=${this._handleNext}
                       >
-                      </ha-icon-button>
+                      </ha-icon-button-next>
                     </div>
                     <h1>${this.calendar.view.title}</h1>
                     <ha-button-toggle-group
                       .buttons=${viewToggleButtons}
                       .active=${this._activeView}
                       @value-changed=${this._handleView}
+                      .dir=${computeRTLDirection(this.hass)}
                     ></ha-button-toggle-group>
                   `
                 : html`
                     <div class="controls">
                       <h1>${this.calendar.view.title}</h1>
                       <div>
-                        <ha-icon-button
+                        <ha-icon-button-prev
                           .label=${this.hass.localize("ui.common.previous")}
-                          .path=${mdiChevronLeft}
                           class="prev"
                           @click=${this._handlePrev}
                         >
-                        </ha-icon-button>
-                        <ha-icon-button
+                        </ha-icon-button-prev>
+                        <ha-icon-button-next
                           .label=${this.hass.localize("ui.common.next")}
-                          .path=${mdiChevronRight}
                           class="next"
                           @click=${this._handleNext}
                         >
-                        </ha-icon-button>
+                        </ha-icon-button-next>
                       </div>
                     </div>
                     <div class="controls">
@@ -179,6 +172,7 @@ export class HAFullCalendar extends LitElement {
                         .buttons=${viewToggleButtons}
                         .active=${this._activeView}
                         @value-changed=${this._handleView}
+                        .dir=${computeRTLDirection(this.hass)}
                       ></ha-button-toggle-group>
                     </div>
                   `}
@@ -221,6 +215,7 @@ export class HAFullCalendar extends LitElement {
     const config: CalendarOptions = {
       ...defaultFullCalendarConfig,
       locale: this.hass.language,
+      firstDay: firstWeekdayIndex(this.hass.locale),
       initialView: this.initialView,
       eventTimeFormat: {
         hour: useAmPm(this.hass.locale) ? "numeric" : "2-digit",
@@ -343,6 +338,9 @@ export class HAFullCalendar extends LitElement {
 
         .today {
           margin-right: 20px;
+          margin-inline-end: 20px;
+          margin-inline-start: initial;
+          direction: var(--direction);
         }
 
         .prev,
@@ -371,6 +369,10 @@ export class HAFullCalendar extends LitElement {
           );
           --fc-theme-standard-border-color: var(--divider-color);
           --fc-border-color: var(--divider-color);
+          --fc-page-bg-color: var(
+            --ha-card-background,
+            var(--card-background-color, white)
+          );
         }
 
         a {

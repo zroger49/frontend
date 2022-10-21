@@ -1,10 +1,13 @@
 import { Connection, createCollection } from "home-assistant-js-websocket";
 import { Store } from "home-assistant-js-websocket/dist/store";
+import memoizeOne from "memoize-one";
 import { computeStateName } from "../common/entity/compute_state_name";
+import { caseInsensitiveStringCompare } from "../common/string/compare";
 import { debounce } from "../common/util/debounce";
 import { HomeAssistant } from "../types";
 
 export interface EntityRegistryEntry {
+  id: string;
   entity_id: string;
   name: string | null;
   icon: string | null;
@@ -12,15 +15,19 @@ export interface EntityRegistryEntry {
   config_entry_id: string | null;
   device_id: string | null;
   area_id: string | null;
-  disabled_by: string | null;
+  disabled_by: "user" | "device" | "integration" | "config_entry" | null;
+  hidden_by: Exclude<EntityRegistryEntry["disabled_by"], "config_entry">;
   entity_category: "config" | "diagnostic" | null;
+  has_entity_name: boolean;
+  original_name?: string;
+  unique_id: string;
 }
 
 export interface ExtEntityRegistryEntry extends EntityRegistryEntry {
-  unique_id: string;
   capabilities: Record<string, unknown>;
-  original_name?: string;
   original_icon?: string;
+  device_class?: string;
+  original_device_class?: string;
 }
 
 export interface UpdateEntityRegistryEntryResult {
@@ -29,12 +36,32 @@ export interface UpdateEntityRegistryEntryResult {
   require_restart?: boolean;
 }
 
+export interface SensorEntityOptions {
+  unit_of_measurement?: string | null;
+}
+
+export interface NumberEntityOptions {
+  unit_of_measurement?: string | null;
+}
+
+export interface WeatherEntityOptions {
+  precipitation_unit?: string | null;
+  pressure_unit?: string | null;
+  temperature_unit?: string | null;
+  visibility_unit?: string | null;
+  wind_speed_unit?: string | null;
+}
+
 export interface EntityRegistryEntryUpdateParams {
   name?: string | null;
   icon?: string | null;
+  device_class?: string | null;
   area_id?: string | null;
   disabled_by?: string | null;
+  hidden_by: string | null;
   new_entity_id?: string;
+  options_domain?: string;
+  options?: SensorEntityOptions | NumberEntityOptions | WeatherEntityOptions;
 }
 
 export const findBatteryEntity = (
@@ -66,7 +93,10 @@ export const computeEntityRegistryName = (
     return entry.name;
   }
   const state = hass.states[entry.entity_id];
-  return state ? computeStateName(state) : null;
+  if (state) {
+    return computeStateName(state);
+  }
+  return entry.original_name ? entry.original_name : entry.entity_id;
 };
 
 export const getExtendedEntityRegistryEntry = (
@@ -130,3 +160,31 @@ export const subscribeEntityRegistry = (
     conn,
     onChange
   );
+
+export const sortEntityRegistryByName = (entries: EntityRegistryEntry[]) =>
+  entries.sort((entry1, entry2) =>
+    caseInsensitiveStringCompare(entry1.name || "", entry2.name || "")
+  );
+
+export const entityRegistryById = memoizeOne(
+  (entries: HomeAssistant["entities"]) => {
+    const entities: HomeAssistant["entities"] = {};
+    for (const entity of Object.values(entries)) {
+      entities[entity.id] = entity;
+    }
+    return entities;
+  }
+);
+
+export const getEntityPlatformLookup = (
+  entities: EntityRegistryEntry[]
+): Record<string, string> => {
+  const entityLookup = {};
+  for (const confEnt of entities) {
+    if (!confEnt.platform) {
+      continue;
+    }
+    entityLookup[confEnt.entity_id] = confEnt.platform;
+  }
+  return entityLookup;
+};

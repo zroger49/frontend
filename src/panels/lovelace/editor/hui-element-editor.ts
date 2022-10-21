@@ -11,7 +11,6 @@ import {
 import { property, state, query } from "lit/decorators";
 import { fireEvent } from "../../../common/dom/fire_event";
 import { handleStructError } from "../../../common/structs/handle-errors";
-import { computeRTL } from "../../../common/util/compute_rtl";
 import { deepEqual } from "../../../common/util/deep-equal";
 import "../../../components/ha-circular-progress";
 import "../../../components/ha-code-editor";
@@ -198,11 +197,14 @@ export abstract class HuiElementEditor<T> extends LitElement {
                 <ha-code-editor
                   mode="yaml"
                   autofocus
+                  autocomplete-entities
+                  autocomplete-icons
+                  .hass=${this.hass}
                   .value=${this.yaml}
                   .error=${Boolean(this._errors)}
-                  .rtl=${computeRTL(this.hass)}
                   @value-changed=${this._handleYAMLChanged}
                   @keydown=${this._ignoreKeydown}
+                  dir="ltr"
                 ></ha-code-editor>
               </div>
             `}
@@ -269,6 +271,11 @@ export abstract class HuiElementEditor<T> extends LitElement {
   private _handleUIConfigChanged(ev: UIConfigChangedEvent) {
     ev.stopPropagation();
     const config = ev.detail.config;
+    Object.keys(config).forEach((key) => {
+      if (config[key] === undefined) {
+        delete config[key];
+      }
+    });
     this.value = config as unknown as T;
   }
 
@@ -334,6 +341,7 @@ export abstract class HuiElementEditor<T> extends LitElement {
           );
         }
       } else {
+        this._guiSupported = false;
         this.GUImode = false;
       }
     } catch (err: any) {

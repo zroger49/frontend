@@ -160,6 +160,9 @@ export class HuiButtonCard extends LitElement implements LovelaceCard {
           hasHold: hasAction(this._config!.hold_action),
           hasDoubleClick: hasAction(this._config!.double_tap_action),
         })}
+        role="button"
+        aria-label=${this._config.name ||
+        (stateObj ? computeStateName(stateObj) : "")}
         tabindex=${ifDefined(
           hasAction(this._config.tap_action) ? "0" : undefined
         )}
@@ -263,6 +266,7 @@ export class HuiButtonCard extends LitElement implements LovelaceCard {
           box-sizing: border-box;
           justify-content: center;
           position: relative;
+          overflow: hidden;
         }
 
         ha-card:focus {

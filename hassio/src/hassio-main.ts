@@ -3,14 +3,14 @@ import { customElement, property } from "lit/decorators";
 import { atLeastVersion } from "../../src/common/config/version";
 import { applyThemesOnElement } from "../../src/common/dom/apply_themes_on_element";
 import { fireEvent } from "../../src/common/dom/fire_event";
-import { isNavigationClick } from "../../src/common/dom/is-navigation-click";
 import { mainWindow } from "../../src/common/dom/get_main_window";
+import { isNavigationClick } from "../../src/common/dom/is-navigation-click";
 import { navigate } from "../../src/common/navigate";
 import { HassioPanelInfo } from "../../src/data/hassio/supervisor";
 import { Supervisor } from "../../src/data/supervisor/supervisor";
 import { makeDialogManager } from "../../src/dialogs/make-dialog-manager";
 import "../../src/layouts/hass-loading-screen";
-import { HomeAssistant, Route } from "../../src/types";
+import { HomeAssistant } from "../../src/types";
 import "./hassio-router";
 import { SupervisorBaseElement } from "./supervisor-base-element";
 
@@ -23,8 +23,6 @@ export class HassioMain extends SupervisorBaseElement {
   @property({ attribute: false }) public panel!: HassioPanelInfo;
 
   @property({ type: Boolean }) public narrow!: boolean;
-
-  @property({ attribute: false }) public route?: Route;
 
   protected firstUpdated(changedProps: PropertyValues) {
     super.firstUpdated(changedProps);
@@ -71,6 +69,18 @@ export class HassioMain extends SupervisorBaseElement {
     window.addEventListener("haptic", (ev) => {
       // @ts-ignore
       fireEvent(window.parent, ev.type, ev.detail, {
+        bubbles: false,
+      });
+    });
+
+    // Forward keydown events to the main window for quickbar access
+    document.body.addEventListener("keydown", (ev: KeyboardEvent) => {
+      if (ev.altKey || ev.ctrlKey || ev.shiftKey || ev.metaKey) {
+        // Ignore if modifier keys are pressed
+        return;
+      }
+      // @ts-ignore
+      fireEvent(mainWindow, "hass-quick-bar-trigger", ev, {
         bubbles: false,
       });
     });
@@ -123,7 +133,8 @@ export class HassioMain extends SupervisorBaseElement {
       this.parentElement,
       this.hass.themes,
       themeName,
-      themeSettings
+      themeSettings,
+      true
     );
   }
 }

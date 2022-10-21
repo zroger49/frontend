@@ -4,7 +4,7 @@ import { LovelaceHeaderFooterConfig } from "../../header-footer/types";
 
 export const getHeaderFooterStubConfig = async (
   hass: HomeAssistant,
-  type: string,
+  type: LovelaceHeaderFooterConfig["type"],
   entities: string[],
   entitiesFallback: string[]
 ): Promise<LovelaceHeaderFooterConfig> => {
@@ -13,7 +13,7 @@ export const getHeaderFooterStubConfig = async (
   const elClass = await getHeaderFooterElementClass(type);
 
   if (elClass && elClass.getStubConfig) {
-    const classStubConfig = elClass.getStubConfig(
+    const classStubConfig = await elClass.getStubConfig(
       hass,
       entities,
       entitiesFallback

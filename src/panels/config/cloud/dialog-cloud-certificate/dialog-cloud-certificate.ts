@@ -3,7 +3,8 @@ import { css, CSSResultGroup, html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators";
 import { formatDateTime } from "../../../../common/datetime/format_date_time";
 import { fireEvent } from "../../../../common/dom/fire_event";
-import { haStyle } from "../../../../resources/styles";
+import { createCloseHeading } from "../../../../components/ha-dialog";
+import { haStyleDialog } from "../../../../resources/styles";
 import type { HomeAssistant } from "../../../../types";
 import type { CloudCertificateParams as CloudCertificateDialogParams } from "./show-dialog-cloud-certificate";
 
@@ -32,8 +33,13 @@ class DialogCloudCertificate extends LitElement {
     return html`
       <ha-dialog
         open
-        .heading=${this.hass!.localize(
-          "ui.panel.config.cloud.dialog_certificate.certificate_information"
+        hideActions
+        @closed=${this.closeDialog}
+        .heading=${createCloseHeading(
+          this.hass,
+          this.hass.localize(
+            "ui.panel.config.cloud.dialog_certificate.certificate_information"
+          )
         )}
       >
         <div>
@@ -68,13 +74,20 @@ class DialogCloudCertificate extends LitElement {
 
   static get styles(): CSSResultGroup {
     return [
-      haStyle,
+      haStyleDialog,
       css`
         ha-dialog {
           --mdc-dialog-max-width: 535px;
         }
         .break-word {
           overflow-wrap: break-word;
+        }
+        p {
+          margin-top: 0;
+          margin-bottom: 12px;
+        }
+        p:last-child {
+          margin-bottom: 0;
         }
       `,
     ];

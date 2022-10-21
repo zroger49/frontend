@@ -16,7 +16,7 @@
       .content {
         box-sizing: border-box;
         padding: 20px 16px;
-        border-radius: 4px;
+        border-radius: var(--ha-card-border-radius, 16px);
         max-width: 432px;
         margin: 64px auto 0;
         box-shadow: var(
@@ -64,7 +64,7 @@
   <body id="particles">
     <div class="content">
       <div class="header">
-        <img src="/static/icons/favicon-192x192.png" height="52" width="52" />
+        <img src="/static/icons/favicon-192x192.png" height="52" width="52" alt="" />
         Home Assistant
       </div>
 

@@ -1,39 +1,29 @@
 import { mdiStop } from "@mdi/js";
-import type { HassEntity } from "home-assistant-js-websocket";
-import {
-  css,
-  CSSResultGroup,
-  html,
-  LitElement,
-  PropertyValues,
-  TemplateResult,
-} from "lit";
-import { customElement, property, state } from "lit/decorators";
+import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { customElement, property } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
 import { computeCloseIcon, computeOpenIcon } from "../common/entity/cover_icon";
+import { supportsFeature } from "../common/entity/supports-feature";
+import {
+  CoverEntity,
+  CoverEntityFeature,
+  isClosing,
+  isFullyClosed,
+  isFullyOpen,
+  isOpening,
+} from "../data/cover";
 import { UNAVAILABLE } from "../data/entity";
 import type { HomeAssistant } from "../types";
-import CoverEntity from "../util/cover-model";
 import "./ha-icon-button";
 
 @customElement("ha-cover-controls")
 class HaCoverControls extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property({ attribute: false }) public stateObj!: HassEntity;
-
-  @state() private _entityObj?: CoverEntity;
-
-  public willUpdate(changedProperties: PropertyValues): void {
-    super.willUpdate(changedProperties);
-
-    if (changedProperties.has("stateObj")) {
-      this._entityObj = new CoverEntity(this.hass, this.stateObj);
-    }
-  }
+  @property({ attribute: false }) public stateObj!: CoverEntity;
 
   protected render(): TemplateResult {
-    if (!this._entityObj) {
+    if (!this.stateObj) {
       return html``;
     }
 
@@ -41,10 +31,10 @@ class HaCoverControls extends LitElement {
       <div class="state">
         <ha-icon-button
           class=${classMap({
-            hidden: !this._entityObj.supportsOpen,
+            hidden: !supportsFeature(this.stateObj, CoverEntityFeature.OPEN),
           })}
           .label=${this.hass.localize(
-            "ui.dialogs.more_info_control.open_cover"
+            "ui.dialogs.more_info_control.cover.open_cover"
           )}
           @click=${this._onOpenTap}
           .disabled=${this._computeOpenDisabled()}
@@ -53,10 +43,10 @@ class HaCoverControls extends LitElement {
         </ha-icon-button>
         <ha-icon-button
           class=${classMap({
-            hidden: !this._entityObj.supportsStop,
+            hidden: !supportsFeature(this.stateObj, CoverEntityFeature.STOP),
           })}
           .label=${this.hass.localize(
-            "ui.dialogs.more_info_control.stop_cover"
+            "ui.dialogs.more_info_control.cover.stop_cover"
           )}
           .path=${mdiStop}
           @click=${this._onStopTap}
@@ -64,10 +54,10 @@ class HaCoverControls extends LitElement {
         ></ha-icon-button>
         <ha-icon-button
           class=${classMap({
-            hidden: !this._entityObj.supportsClose,
+            hidden: !supportsFeature(this.stateObj, CoverEntityFeature.CLOSE),
           })}
           .label=${this.hass.localize(
-            "ui.dialogs.more_info_control.close_cover"
+            "ui.dialogs.more_info_control.cover.close_cover"
           )}
           @click=${this._onCloseTap}
           .disabled=${this._computeClosedDisabled()}
@@ -84,8 +74,7 @@ class HaCoverControls extends LitElement {
     }
     const assumedState = this.stateObj.attributes.assumed_state === true;
     return (
-      (this._entityObj.isFullyOpen || this._entityObj.isOpening) &&
-      !assumedState
+      (isFullyOpen(this.stateObj) || isOpening(this.stateObj)) && !assumedState
     );
   }
 
@@ -95,24 +84,30 @@ class HaCoverControls extends LitElement {
     }
     const assumedState = this.stateObj.attributes.assumed_state === true;
     return (
-      (this._entityObj.isFullyClosed || this._entityObj.isClosing) &&
+      (isFullyClosed(this.stateObj) || isClosing(this.stateObj)) &&
       !assumedState
     );
   }
 
   private _onOpenTap(ev): void {
     ev.stopPropagation();
-    this._entityObj.openCover();
+    this.hass.callService("cover", "open_cover", {
+      entity_id: this.stateObj.entity_id,
+    });
   }
 
   private _onCloseTap(ev): void {
     ev.stopPropagation();
-    this._entityObj.closeCover();
+    this.hass.callService("cover", "close_cover", {
+      entity_id: this.stateObj.entity_id,
+    });
   }
 
   private _onStopTap(ev): void {
     ev.stopPropagation();
-    this._entityObj.stopCover();
+    this.hass.callService("cover", "stop_cover", {
+      entity_id: this.stateObj.entity_id,
+    });
   }
 
   static get styles(): CSSResultGroup {

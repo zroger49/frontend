@@ -107,10 +107,12 @@ class HaAuthorize extends litLocalizeLiteMixin(LitElement) {
           default_theme: "default",
           default_dark_theme: null,
           themes: {},
-          darkMode: false,
+          darkMode: true,
+          theme: "default",
         },
-        "default",
-        { dark: true }
+        undefined,
+        undefined,
+        true
       );
     }
 

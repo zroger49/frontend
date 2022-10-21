@@ -3,9 +3,10 @@ import {
   applyThemesOnElement,
   invalidateThemeCache,
 } from "../common/dom/apply_themes_on_element";
+import { fireEvent } from "../common/dom/fire_event";
 import { computeLocalize } from "../common/translations/localize";
 import { DEFAULT_PANEL } from "../data/panel";
-import { NumberFormat, TimeFormat } from "../data/translation";
+import { FirstWeekday, NumberFormat, TimeFormat } from "../data/translation";
 import { translationMetadata } from "../resources/translations-metadata";
 import { HomeAssistant } from "../types";
 import { getLocalLanguage, getTranslation } from "../util/common-translation";
@@ -85,6 +86,7 @@ export const provideHass = (
     hass().updateHass({
       localize: await computeLocalize(elements[0], lang, hass().resources),
     });
+    fireEvent(window, "translations-updated");
   }
 
   function updateStates(newStates: HassEntities) {
@@ -192,6 +194,7 @@ export const provideHass = (
       socket: {
         readyState: WebSocket.OPEN,
       },
+      haVersion: "DEMO",
     } as any,
     connected: true,
     states: {},
@@ -201,6 +204,7 @@ export const provideHass = (
       default_dark_theme: null,
       themes: {},
       darkMode: false,
+      theme: "default",
     },
     panels: demoPanels,
     services: demoServices,
@@ -220,6 +224,7 @@ export const provideHass = (
       language: localLanguage,
       number_format: NumberFormat.language,
       time_format: TimeFormat.language,
+      first_weekday: FirstWeekday.language,
     },
     resources: null as any,
     localize: () => "",
@@ -270,7 +275,10 @@ export const provideHass = (
     updateStates,
     updateTranslations,
     addTranslations,
-    loadFragmentTranslation: async (_fragment: string) => hass().localize,
+    loadFragmentTranslation: async (fragment: string) => {
+      await updateTranslations(fragment);
+      return hass().localize;
+    },
     addEntities,
     mockWS(type, callback) {
       wsCommands[type] = callback;
@@ -294,7 +302,9 @@ export const provideHass = (
       applyThemesOnElement(
         document.documentElement,
         themes,
-        selectedTheme!.theme
+        selectedTheme!.theme,
+        undefined,
+        true
       );
     },
 

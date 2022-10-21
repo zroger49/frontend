@@ -17,10 +17,22 @@ export enum TimeFormat {
   twenty_four = "24",
 }
 
+export enum FirstWeekday {
+  language = "language",
+  monday = "monday",
+  tuesday = "tuesday",
+  wednesday = "wednesday",
+  thursday = "thursday",
+  friday = "friday",
+  saturday = "saturday",
+  sunday = "sunday",
+}
+
 export interface FrontendLocaleData {
   language: string;
   number_format: NumberFormat;
   time_format: TimeFormat;
+  first_weekday: FirstWeekday;
 }
 
 declare global {
@@ -37,7 +49,10 @@ export type TranslationCategory =
   | "options"
   | "device_automation"
   | "mfa_setup"
-  | "system_health";
+  | "system_health"
+  | "device_class"
+  | "application_credentials"
+  | "issues";
 
 export const fetchTranslationPreferences = (hass: HomeAssistant) =>
   fetchFrontendUserData(hass.connection, "language");
@@ -51,7 +66,7 @@ export const getHassTranslations = async (
   hass: HomeAssistant,
   language: string,
   category: TranslationCategory,
-  integration?: string,
+  integration?: string | string[],
   config_flow?: boolean
 ): Promise<Record<string, unknown>> => {
   const result = await hass.callWS<{ resources: Record<string, unknown> }>({

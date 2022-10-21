@@ -12,8 +12,10 @@ import { property, state } from "lit/decorators";
 import { ifDefined } from "lit/directives/if-defined";
 import { styleMap } from "lit/directives/style-map";
 import { computeActiveState } from "../../common/entity/compute_active_state";
+import { computeDomain } from "../../common/entity/compute_domain";
 import { computeStateDomain } from "../../common/entity/compute_state_domain";
 import { iconColorCSS } from "../../common/style/icon_color_css";
+import { cameraUrlWithWidthHeight } from "../../data/camera";
 import type { HomeAssistant } from "../../types";
 import "../ha-state-icon";
 
@@ -80,20 +82,21 @@ export class StateBadge extends LitElement {
 
     this._showIcon = true;
 
-    if (stateObj) {
+    if (stateObj && this.overrideImage === undefined) {
       // hide icon if we have entity picture
       if (
-        ((stateObj.attributes.entity_picture_local ||
+        (stateObj.attributes.entity_picture_local ||
           stateObj.attributes.entity_picture) &&
-          !this.overrideIcon) ||
-        this.overrideImage
+        !this.overrideIcon
       ) {
         let imageUrl =
-          this.overrideImage ||
           stateObj.attributes.entity_picture_local ||
           stateObj.attributes.entity_picture;
         if (this.hass) {
           imageUrl = this.hass.hassUrl(imageUrl);
+        }
+        if (computeDomain(stateObj.entity_id) === "camera") {
+          imageUrl = cameraUrlWithWidthHeight(imageUrl, 80, 80);
         }
         hostStyle.backgroundImage = `url(${imageUrl})`;
         this._showIcon = false;

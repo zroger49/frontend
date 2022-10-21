@@ -3,6 +3,7 @@ import { html, LitElement, css, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators";
 import { applyThemesOnElement } from "../../../src/common/dom/apply_themes_on_element";
 import { fireEvent } from "../../../src/common/dom/fire_event";
+import "../../../src/components/ha-card";
 
 @customElement("demo-black-white-row")
 class DemoBlackWhiteRow extends LitElement {
@@ -58,10 +59,12 @@ class DemoBlackWhiteRow extends LitElement {
         default_theme: "default",
         default_dark_theme: "default",
         themes: {},
-        darkMode: false,
+        darkMode: true,
+        theme: "default",
       },
-      "default",
-      { dark: true }
+      undefined,
+      undefined,
+      true
     );
   }
 

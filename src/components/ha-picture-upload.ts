@@ -1,5 +1,4 @@
 import { mdiImagePlus } from "@mdi/js";
-import "@polymer/paper-input/paper-input-container";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../common/dom/fire_event";
@@ -39,6 +38,7 @@ export class HaPictureUpload extends LitElement {
         .uploading=${this._uploading}
         .value=${this.value ? html`<img .src=${this.value} />` : ""}
         @file-picked=${this._handleFilePicked}
+        @change=${this._handleFileCleared}
         accept="image/png, image/jpeg, image/gif"
       ></ha-file-upload>
     `;
@@ -51,6 +51,10 @@ export class HaPictureUpload extends LitElement {
     } else {
       this._uploadFile(file);
     }
+  }
+
+  private async _handleFileCleared() {
+    this.value = null;
   }
 
   private async _cropFile(file: File) {

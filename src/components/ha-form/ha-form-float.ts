@@ -1,21 +1,21 @@
-import "@material/mwc-textfield";
-import type { TextField } from "@material/mwc-textfield";
 import { css, html, LitElement, TemplateResult, PropertyValues } from "lit";
 import { customElement, property, query } from "lit/decorators";
 import { fireEvent } from "../../common/dom/fire_event";
+import type { HaTextField } from "../ha-textfield";
+import "../ha-textfield";
 import { HaFormElement, HaFormFloatData, HaFormFloatSchema } from "./types";
 
 @customElement("ha-form-float")
 export class HaFormFloat extends LitElement implements HaFormElement {
-  @property() public schema!: HaFormFloatSchema;
+  @property({ attribute: false }) public schema!: HaFormFloatSchema;
 
-  @property() public data!: HaFormFloatData;
+  @property({ attribute: false }) public data!: HaFormFloatData;
 
   @property() public label!: string;
 
   @property({ type: Boolean }) public disabled = false;
 
-  @query("mwc-textfield") private _input?: HTMLElement;
+  @query("ha-textfield") private _input?: HaTextField;
 
   public focus() {
     if (this._input) {
@@ -25,7 +25,8 @@ export class HaFormFloat extends LitElement implements HaFormElement {
 
   protected render(): TemplateResult {
     return html`
-      <mwc-textfield
+      <ha-textfield
+        type="numeric"
         inputMode="decimal"
         .label=${this.label}
         .value=${this.data !== undefined ? this.data : ""}
@@ -35,7 +36,7 @@ export class HaFormFloat extends LitElement implements HaFormElement {
         .suffix=${this.schema.description?.suffix}
         .validationMessage=${this.schema.required ? "Required" : undefined}
         @input=${this._valueChanged}
-      ></mwc-textfield>
+      ></ha-textfield>
     `;
   }
 
@@ -46,13 +47,25 @@ export class HaFormFloat extends LitElement implements HaFormElement {
   }
 
   private _valueChanged(ev: Event) {
-    const source = ev.target as TextField;
-    const rawValue = source.value;
+    const source = ev.target as HaTextField;
+    const rawValue = source.value.replace(",", ".");
 
     let value: number | undefined;
 
+    if (rawValue.endsWith(".")) {
+      return;
+    }
+
+    // Allow user to start typing a negative value
+    if (rawValue === "-") {
+      return;
+    }
+
     if (rawValue !== "") {
       value = parseFloat(rawValue);
+      if (isNaN(value)) {
+        value = undefined;
+      }
     }
 
     // Detect anything changed
@@ -61,7 +74,6 @@ export class HaFormFloat extends LitElement implements HaFormElement {
       const newRawValue = value === undefined ? "" : String(value);
       if (source.value !== newRawValue) {
         source.value = newRawValue;
-        return;
       }
       return;
     }
@@ -75,7 +87,7 @@ export class HaFormFloat extends LitElement implements HaFormElement {
     :host([own-margin]) {
       margin-bottom: 5px;
     }
-    mwc-textfield {
+    ha-textfield {
       display: block;
     }
   `;

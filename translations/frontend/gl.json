@@ -1,4 +1,31 @@
 {
+    "panel": {
+        "shopping_list": "Lista da compra"
+    },
+    "state": {
+        "default": {
+            "unavailable": "Non dispoñible",
+            "unknown": "Descoñecido"
+        }
+    },
+    "state_attributes": {
+        "climate": {
+            "fan_mode": {
+                "auto": "Automático",
+                "off": "Apagado",
+                "on": "Acendido"
+            }
+        }
+    },
+    "state_badge": {
+        "default": {
+            "error": "Erro",
+            "unknown": "Descoñecido"
+        },
+        "person": {
+            "home": "Na casa"
+        }
+    },
     "supervisor": {
         "addon": {
             "configuration": {
@@ -11,10 +38,9 @@
                 "network": {
                     "container": "Contedor",
                     "disabled": "Deshabilitada",
-                    "header": "Rede",
-                    "host": "Host"
+                    "header": "Rede"
                 },
-                "no_configuration": "Este complemento non expón a configuración para que poidas xogar con ...",
+                "no_configuration": "Este complemento non expón a configuración para que poidas xogar con …",
                 "options": {
                     "edit_in_ui": "Editar en IU",
                     "edit_in_yaml": "Editar en YAML",
@@ -77,16 +103,14 @@
                         "auth": "auth",
                         "docker": "docker",
                         "hardware": "hardware",
-                        "hass": "hass",
                         "hassio": "hassio",
                         "host": "host",
                         "host_pid": "pid do host",
                         "ingress": "entrada",
-                        "rating": "clasificación",
-                        "stage": "etapa"
+                        "rating": "clasificación"
                     },
                     "rating": {
-                        "description": "Home Assistant ofrece unha clasificación de seguridade para cada un dos complementos, indicando os riscos que implica o uso do complemento. Canto máis acceso precisa un complemento no seu sistema, menor será a puntuación, aumentando os riscos potenciais de seguridade. \n\nA puntuación está nunha escala de 1 a 6. Onde 1 é a puntuación máis baixa (considerada o máis inseguro e maior risco) e unha puntuación de 6 é a puntuación máis alta (considerada o máis seguro e menor risco).",
+                        "description": "Home Assistant ofrece unha clasificación de seguridade para cada un dos complementos, indicando os riscos que implica o uso do complemento. Canto máis acceso precisa un complemento no seu sistema, menor será a puntuación, aumentando os riscos potenciais de seguridade. \n\nA puntuación está nunha escala de 1 a 8. Onde 1 é a puntuación máis baixa (considerada o máis inseguro e maior risco) e unha puntuación de 8 é a puntuación máis alta (considerada o máis seguro e menor risco).",
                         "title": "Clasificación de seguridade do complemento"
                     },
                     "role": {
@@ -213,17 +237,13 @@
             "restart": {
                 "text": "Estás seguro de que queres reiniciar {name} ?",
                 "title": "Reiniciar {name}"
-            },
-            "update": {
-                "text": "Seguro que queres actualizar {name} á versión {version}?",
-                "title": "Actualizar {name}"
             }
         },
         "dashboard": {
             "addon_new_version": "Nova versión dispoñible",
             "addon_running": "O complemento está en execución",
             "addon_stopped": "O complemento está parado",
-            "addons": "Complementos",
+            "addons": "Complementos instalados",
             "no_addons": "Aínda non tes ningún complemento instalado. Diríxete á tenda de complementos para comezar."
         },
         "dialog": {
@@ -260,14 +280,11 @@
             "repositories": {
                 "add": "Engadir",
                 "remove": "Eliminar",
-                "title": "Xestionar os repositorios de complementos"
+                "title": "Xestionar os repositorios de complementos",
+                "used": "O repositorio está en uso para os complementos instalados e non se pode eliminar."
             },
             "restart_addon": {
-                "confirm_text": "Reiniciar complemento",
                 "text": "¿Queres reiniciar o complemento cos teus cambios?"
-            },
-            "update": {
-                "updating": "Actualizando {name} á versión {version}"
             }
         },
         "my": {
@@ -320,10 +337,6 @@
                 "log_provider": "Provedor de rexistros"
             },
             "supervisor": {
-                "beta_backup": "Asegúrate de ter copias de seguridade dos teus datos antes de activar esta función.",
-                "beta_join_confirm": "Queres unirte á canle beta?",
-                "beta_release_items": "Isto inclúe versións beta para:",
-                "beta_warning": "As versións beta son para probadores e adoptantes anticipados e poden conter cambios de código inestables",
                 "channel": "Canle",
                 "cpu_usage": "Uso da CPU do supervisor",
                 "failed_to_reload": "Non se puido recargar o supervisor",
@@ -350,8 +363,6 @@
                 "unhealthy_title": "A túa instalación non é saudable",
                 "unsupported_description": "Abaixo amósase unha lista de problemas atopados coa súa instalación, faga clic nas ligazóns para saber como pode resolver os problemas.",
                 "unsupported_reason": {
-                    "container": "Contedores coñecidos por causar problemas",
-                    "content-trust": "A validación de confianza de contido está desactivada",
                     "dbus": "DBUS",
                     "docker_configuration": "Configuración de Docker",
                     "docker_version": "Versión Docker",
@@ -366,13 +377,28 @@
                 "update_supervisor": "Actualice o supervisor",
                 "warning": "AVISO"
             }
+        },
+        "update_available": {
+            "description": "Tes instalada a {version}. Fai clic en actualizar para actualizar á versión {newest_version}",
+            "no_update": "Non hai ningunha actualización dispoñible para {name}"
         }
     },
     "ui": {
         "card": {
+            "area": {
+                "area_not_found": "Área non atopada"
+            },
             "fan": {
                 "direction": "Enderezo",
                 "preset_mode": "Modo predefinido"
+            },
+            "media_player": {
+                "media_pause": "Pausa",
+                "media_stop": "Deter",
+                "media_volume_down": "Baixar o volume",
+                "media_volume_mute": "Silenciar o volume",
+                "media_volume_unmute": "Reactivar o volume",
+                "media_volume_up": "Subir o volume"
             },
             "script": {
                 "run": "Executar"
@@ -411,6 +437,10 @@
                 "night": "Noite"
             }
         },
+        "common": {
+            "cancel": "Cancelar",
+            "submit": "Enviar"
+        },
         "components": {
             "addon-picker": {
                 "addon": "Complemento",
@@ -444,10 +474,16 @@
                     "show_entities": "Amosar entidades"
                 }
             },
+            "history_charts": {
+                "no_history_found": "Non se atopou historial de estado."
+            },
             "logbook": {
                 "messages": {
+                    "became_unavailable": "deixou de estar dispoñible",
+                    "detected_device_class": "detectouse {device_class}",
                     "is_closing": "estase pechando",
-                    "is_opening": "estase abrindo"
+                    "is_opening": "estase abrindo",
+                    "was_normal": "era normal"
                 },
                 "show_trace": "Amosar rastro"
             },
@@ -456,7 +492,15 @@
                     "url": "URL"
                 }
             },
+            "qr-scanner": {
+                "enter_qr_code": "Introduza o valor do código QR",
+                "manual_input": "Podes escanear o código QR con outro escáner QR e pegar o código na seguinte entrada",
+                "not_supported": "O teu navegador non admite o escaneo QR",
+                "only_https_supported": "Só podes usar a túa cámara para escanear un código QR cando utilizas HTTPS.",
+                "select_camera": "Seleccionar cámara"
+            },
             "related-filter-menu": {
+                "filter": "Filtrar",
                 "filter_by_area": "Filtrar por área",
                 "filter_by_device": "Filtrar por dispositivo",
                 "filter_by_entity": "Filtrar por entidade",
@@ -464,9 +508,11 @@
                 "filtered_by_device": "dispositivo: {device_name}",
                 "filtered_by_entity": "entidade: {entity_name}"
             },
+            "related-items": {
+                "entity": "Entidades relacionadas"
+            },
             "service-control": {
                 "required": "Este campo é necesario",
-                "service_data": "Datos do servizo",
                 "target": "Obxectivos"
             },
             "statistic-picker": {
@@ -474,19 +520,48 @@
             }
         },
         "dialogs": {
+            "entity_registry": {
+                "editor": {
+                    "device_classes": {
+                        "binary_sensor": {
+                            "door": "Porta"
+                        }
+                    }
+                },
+                "related": "Relacionado"
+            },
+            "generic": {
+                "ok": "OK"
+            },
             "more_info_control": {
+                "cover": {
+                    "close_tilt_cover": "Pechar a inclinación da persiana"
+                },
+                "dismiss": "Ocultar a fiestra de diálogo",
                 "remote": {
                     "activity": "Actividade actual"
                 }
             },
             "mqtt_device_debug_info": {
+                "entities": "Entidades",
                 "payload_display": "Amosar carga útil",
                 "show_as_yaml": "Amosar como YAML"
             },
             "quick-bar": {
                 "commands": {
                     "navigation": {
-                        "tag": "Etiquetas"
+                        "energy": "Enerxía",
+                        "users": "Usuarios"
+                    },
+                    "reload": {
+                        "filesize": "Entidades de tamaño de ficheiro",
+                        "mqtt": "Entidades MQTT configuradas manualmente",
+                        "ping": "Ping a entidades binarias do sensor",
+                        "reload": "{domain}",
+                        "rpi_gpio": "Entidades GPIO de Raspberry Pi",
+                        "smtp": "Servizos de notificación SMTP",
+                        "themes": "Temas",
+                        "trend": "Entidades de tendencia"
                     },
                     "types": {
                         "navigation": "Navegar",
@@ -497,8 +572,7 @@
             },
             "zha_device_info": {
                 "buttons": {
-                    "device_children": "Ver fillos",
-                    "view_in_visualization": "Ver en Visualización"
+                    "view_network": "Ver rede"
                 },
                 "device_children": "Dispositivos Zigbee fillos"
             },
@@ -509,16 +583,25 @@
         "errors": {
             "config": {
                 "edit_in_yaml_supported": "Aínda podes editar a túa configuración en YAML.",
-                "editor_not_available": "Non hai editor visual dispoñible para o tipo \" {type} \".",
+                "editor_not_available": "Non hai ningún editor visual dispoñible para o tipo \"{type}\".",
                 "editor_not_supported": "O editor visual non é compatible con esta configuración",
-                "key_missing": "Falta a clave requirida \" {key} \".",
-                "key_wrong_type": "O editor visual non admite o valor proporcionado para \" {key} Admitimos ( {type_correct} ) pero recibimos ( {type_wrong} ).",
+                "key_missing": "Falta a clave requirida \"{key}\".",
+                "key_wrong_type": "O editor visual non admite o valor proporcionado para \"{key}\". Sopórtase ({type_correct}) pero recibiuse ({type_wrong}).",
                 "no_template_editor_support": "Os modelos non son compatibles co editor visual"
             }
+        },
+        "login-form": {
+            "password": "Contrasinal"
+        },
+        "notification_drawer": {
+            "close": "Cerrar"
         },
         "panel": {
             "config": {
                 "areas": {
+                    "editor": {
+                        "create": "Crear"
+                    },
                     "picker": {
                         "introduction2": "Para colocar os dispositivos nunha área, use a ligazón seguinte para navegar ata a páxina de integracións e, a continuación, faga clic nunha integración configurada para acceder ás tarxetas do dispositivo."
                     }
@@ -526,6 +609,9 @@
                 "automation": {
                     "editor": {
                         "actions": {
+                            "alias": "Nome da acción",
+                            "change_alias": "Ronomear acción",
+                            "delete_confirm_title": "¿Borrar acción?",
                             "type": {
                                 "device_id": {
                                     "extra_fields": {
@@ -538,7 +624,10 @@
                                 }
                             }
                         },
+                        "automation_alias": "Nome da automatización",
                         "conditions": {
+                            "testing_error": "Non cumpre coa condición",
+                            "testing_pass": "Cumpre coa condición",
                             "type": {
                                 "device": {
                                     "extra_fields": {
@@ -553,16 +642,30 @@
                                 }
                             }
                         },
+                        "disable": "Desactivar",
+                        "disabled": "Automatización desactivada",
+                        "enable": "Activar",
+                        "missing_name": "Non se pode grabar a automatización se non ten nome",
+                        "rename": "Renomear",
                         "show_trace": "Mostrar rastro",
                         "triggers": {
+                            "edit_id": "Editar ID do disparador",
                             "type": {
                                 "mqtt": {
                                     "label": "MQTT"
+                                },
+                                "sun": {
+                                    "label": "Sol",
+                                    "sunrise": "Amencer",
+                                    "sunset": "Solpor"
                                 }
                             }
                         }
                     },
                     "picker": {
+                        "delete": "Borrar",
+                        "delete_confirm_text": "{name} borrarase permanentemente.",
+                        "delete_confirm_title": "¿Borrar automatización?",
                         "dev_automation": "Depurar automatización",
                         "dev_only_editable": "Só se poden depurar os automatismos definidos en automations.yaml",
                         "show_info_automation": "Amosar información sobre a automatización"
@@ -580,6 +683,7 @@
                 "cloud": {
                     "account": {
                         "google": {
+                            "devices_pin": "PIN de dispositivo de seguridade",
                             "not_configured_text": "Antes de usar o Asistente de Google, debes activar a skill Home Assistant Cloud para Google Assistant na aplicación Google Home.",
                             "not_configured_title": "Google Assistant non está activado"
                         },
@@ -592,13 +696,33 @@
                                 "target_browser": "Navegador"
                             },
                             "try": "Probar"
+                        },
+                        "webhooks": {
+                            "no_hooks_yet": "Semella que aínda non tes webhooks. Comeza configurando un"
                         }
                     },
                     "forgot_password": {
                         "instructions": "Introduce o teu enderezo de correo electrónico e enviarémosche unha ligazón para restablecer o teu contrasinal."
                     },
+                    "google": {
+                        "exposed": "{selected} exposto"
+                    },
                     "register": {
-                        "email_address": "Enderezo electrónico"
+                        "email_address": "Enderezo electrónico",
+                        "title": "Rexistrar conta"
+                    }
+                },
+                "common": {
+                    "learn_more": "Saber máis"
+                },
+                "core": {
+                    "section": {
+                        "core": {
+                            "core_config": {
+                                "latitude": "Latitude",
+                                "longitude": "Lonxitude"
+                            }
+                        }
                     }
                 },
                 "devices": {
@@ -612,8 +736,47 @@
                     }
                 },
                 "energy": {
+                    "caption": "Enerxía",
+                    "grid": {
+                        "flow_dialog": {
+                            "from": {
+                                "cost_number": "Usar prezo fixo",
+                                "cost_number_input": "Prezo por kWh"
+                            }
+                        }
+                    },
                     "solar": {
                         "sub": "Permita a Home Assistant monitorear sus paneles solares y obtener "
+                    },
+                    "validation": {
+                        "issues": {
+                            "entity_negative_state": {
+                                "description": "As seguintes entidades teñen un estado negativo mentres agardan un estado positivo",
+                                "title": "A entidade ten un estado negativo"
+                            },
+                            "entity_not_defined": {
+                                "description": "Comproba a integración ou a configuración que proporciona:",
+                                "title": "Entidade non definida"
+                            },
+                            "entity_state_non_numeric": {
+                                "description": "As seguintes entidades teñen un estado que non pode ser analizado como un número",
+                                "title": "A entidade ten un esrado non numérico"
+                            },
+                            "entity_unavailable": {
+                                "description": "O estado das entidades configuradas non está dispoñible actualmente",
+                                "title": "Entidade non dispoñible"
+                            },
+                            "entity_unexpected_unit_energy": {
+                                "description": "As seguintes entidades non teñen as unidades de medida esperadas 'kWh' ou 'Wh'",
+                                "title": "Unidade de medida inesperada"
+                            },
+                            "entity_unexpected_unit_energy_price": {
+                                "title": "Unidade de medida inesperada"
+                            },
+                            "recorder_untracked": {
+                                "title": "Entidade sen seguimento"
+                            }
+                        }
                     }
                 },
                 "entities": {
@@ -623,13 +786,31 @@
                             "show_disabled": "Amosar entidades desactivadas",
                             "show_readonly": "Amosar entidades de só lectura",
                             "show_unavailable": "Amosar entidades non dispoñibles"
+                        },
+                        "headers": {
+                            "disabled_by": "Deshabilitado por"
+                        },
+                        "status": {
+                            "disabled": "Desactivado"
                         }
+                    }
+                },
+                "hardware": {
+                    "host_shutting_down": "sistema apagándose"
+                },
+                "helpers": {
+                    "types": {
+                        "input_text": "Texto"
                     }
                 },
                 "integrations": {
                     "config_entry": {
+                        "application_credentials": {
+                            "delete_error_title": "Fallou o borrado de Credenciais de Aplicación",
+                            "delete_title": "Credenciais de Aplicación",
+                            "learn_more": "Aprende máis sobre Credenciais de Aplicacións"
+                        },
                         "disable": {
-                            "disable_confirm": "Seguro que queres desactivar esta entrada de configuración? Os seus dispositivos e entidades estarán desactivados.",
                             "disabled": "Desactivado",
                             "disabled_by": {
                                 "device": "dispositivo",
@@ -640,16 +821,17 @@
                         },
                         "disable_restart_confirm": "Reinicie o Home Assistant para rematar de desactivar esta integración",
                         "enable_restart_confirm": "Reinicie o Home Assistant para rematar de habilitar esta integración",
-                        "not_loaded": "Non cargado, comproba o {logs_link}"
+                        "hardware": "Hardware: {version}",
+                        "not_loaded": "Non cargado, comproba o {logs_link}",
+                        "state": {
+                            "setup_in_progress": "Inicializando"
+                        }
                     },
                     "config_flow": {
                         "could_not_load": "Non se puido cargar o fluxo de configuración",
                         "error": "Erro",
                         "not_loaded": "Non se puido cargar a integración. Tenta reiniciar Home Assistant.",
-                        "pick_flow_step": {
-                            "new_flow": "Non, configura outra instancia de {integration}",
-                            "title": "Descubrimos estes, queres montalos?"
-                        }
+                        "success": "Éxito"
                     },
                     "confirm_new": "¿Queres configurar {integration} ?",
                     "disable": {
@@ -674,7 +856,9 @@
                 "lovelace": {
                     "dashboards": {
                         "detail": {
-                            "show_sidebar": "Amosar na barra lateral"
+                            "delete": "Borrar",
+                            "show_sidebar": "Amosar na barra lateral",
+                            "title_required": "O título é necesario"
                         },
                         "picker": {
                             "headers": {
@@ -684,38 +868,28 @@
                     },
                     "description": "Crea conxuntos de tarxetas personalizados para controlar a túa casa"
                 },
-                "ozw": {
-                    "network_status": {
-                        "unknown": "Descoñecido"
+                "person": {
+                    "detail": {
+                        "local_only": "Somentes se pode iniciar sesión dende a rede local"
                     }
                 },
                 "scene": {
-                    "picker": {
-                        "show_info_scene": "Amosar información sobre a escena"
+                    "editor": {
+                        "entities": {
+                            "add": "Engadir unha entidade"
+                        }
                     }
                 },
                 "script": {
                     "picker": {
+                        "learn_more": "Aprender máis sobre scripts",
                         "show_info": "Amosar información sobre o script"
-                    }
-                },
-                "server_control": {
-                    "section": {
-                        "reloading": {
-                            "filesize": "Entidades de tamaño de ficheiro",
-                            "mqtt": "Entidades MQTT configuradas manualmente",
-                            "ping": "Ping a entidades binarias do sensor",
-                            "reload": "{domain}",
-                            "rpi_gpio": "Entidades GPIO de Raspberry Pi",
-                            "smtp": "Servizos de notificación SMTP",
-                            "trend": "Entidades de tendencia"
-                        }
                     }
                 },
                 "users": {
                     "editor": {
                         "name": "Nome de visualización",
-                        "password_changed": "O contrasinal cambiouse correctamente"
+                        "username": "Usuario"
                     },
                     "picker": {
                         "headers": {
@@ -729,20 +903,27 @@
                         "refresh_topology": "Actualizar topoloxía"
                     }
                 },
-                "zwave": {
-                    "migration": {
-                        "ozw": {
-                            "header": "Migrar a OpenZWave",
-                            "introduction": "Este asistente axudarache a migrar da integración herdada de Z-Wave á integración OpenZWave que está actualmente en versión beta."
-                        }
-                    },
-                    "ozw_log": {
-                        "introduction": "Ver o rexistro. 0 é o mínimo (carga todo o rexistro) e 1000 é o máximo. Load amosará un rexistro estático e a cola actualizarase automaticamente co último número de liñas especificado no rexistro."
+                "zone": {
+                    "detail": {
+                        "latitude": "Latitude",
+                        "longitude": "Lonxitude"
                     }
                 },
                 "zwave_js": {
+                    "common": {
+                        "back": "Volver"
+                    },
                     "device_info": {
                         "device_config": "Configurar dispositivo"
+                    },
+                    "logs": {
+                        "download_logs": "Descargar rexistros"
+                    },
+                    "navigation": {
+                        "network": "Rede"
+                    },
+                    "network_status": {
+                        "unknown": "Descoñecido"
                     },
                     "node_config": {
                         "attribution": "{device_database} proporciona os parámetros e as descricións de configuración do dispositivo",
@@ -752,6 +933,14 @@
                         "introduction": "Xestione e axuste os parámetros de configuración específicos do dispositivo (nodo) para o dispositivo seleccionado",
                         "parameter_is_read_only": "Este parámetro é de só lectura.",
                         "zwave_js_device_database": "Base de datos de dispositivos Z-Wave JS"
+                    },
+                    "provisioned": {
+                        "confirm_unprovision_text": "Se desaprovisiona o dispositivo, non se engadirá ao Home Assistant cando estea prendido. Se xa está engadido ao Home Assistant, ao eliminar o dispositivo aprovisionado non se eliminará do Home Assistant.",
+                        "included": "Incluído",
+                        "not_included": "Non incluído"
+                    },
+                    "reinterview_node": {
+                        "interview_complete": "Entrevista co dispositivo completa."
                     }
                 }
             },
@@ -760,17 +949,39 @@
                     "services": {
                         "accepts_target": "Este servizo acepta un destino, por exemplo: `entity_id: light.bed_light`",
                         "all_parameters": "Todos os parámetros dispoñibles",
+                        "call_service": "Chamar servizo",
                         "no_template_ui_support": "A interface de usuario non admite modelos, máis podes usar o editor YAML.",
                         "ui_mode": "Ir ao modo de interface de usuario",
                         "yaml_mode": "Ir ao modo YAML",
                         "yaml_parameters": "Os parámetros só están dispoñibles no modo YAML"
                     },
                     "states": {
+                        "alert_entity_field": "Entidade é un campo obrigatorio",
                         "copy_id": "Copia a identificación ao portapapeis"
+                    },
+                    "statistics": {
+                        "issues": {
+                            "no_state": "Non hai estádo dispoñible para esta entidade"
+                        }
                     },
                     "templates": {
                         "no_listeners": "Este modelo non escoita ningún evento e non se actualizará automaticamente.",
                         "unknown_error_template": "Erro descoñecido ao amosar o modelo"
+                    },
+                    "yaml": {
+                        "section": {
+                            "reloading": {
+                                "filesize": "Entidades de tamaño de ficheiro",
+                                "mqtt": "Entidades MQTT configuradas manualmente",
+                                "ping": "Ping a entidades binarias do sensor",
+                                "reload": "{domain}",
+                                "rpi_gpio": "Entidades GPIO de Raspberry Pi",
+                                "smtp": "Servizos de notificación SMTP",
+                                "themes": "Temas",
+                                "timer": "Temporizadores",
+                                "trend": "Entidades de tendencia"
+                            }
+                        }
                     }
                 }
             },
@@ -778,13 +989,17 @@
                 "cards": {
                     "confirm_delete": "Seguro que queres eliminar esta tarxeta?",
                     "picture-elements": {
-                        "more_info": "Amosar máis información: {name}"
+                        "more_info": "Amosar máis información: {name}",
+                        "url": "Abrir fiestra a {url_path}"
                     }
                 },
                 "editor": {
                     "card": {
                         "alarm-panel": {
                             "description": "A tarxeta Panel de alarma permíte armar e desarmar as integracións do seu panel de control de alarma."
+                        },
+                        "area": {
+                            "show_camera": "Mostra a imaxe da cámara en lugar da imaxe da área"
                         },
                         "button": {
                             "default_action_help": "A acción predeterminada depende das capacidades da entidade, cambiará ou amosará o diálogo de máis información.",
@@ -802,6 +1017,9 @@
                             "condition_explanation": "A tarxeta amosarase cando se cumpran TODAS as seguintes condicións.",
                             "description": "A tarxeta Condicional mostra outra tarxeta en función dos estados da entidade."
                         },
+                        "config": {
+                            "optional": "Opcional"
+                        },
                         "entities": {
                             "description": "A tarxeta de entidades é o tipo de tarxeta máis común. Agrupa elementos en listas.",
                             "show_header_toggle": "Queres amosar o interruptor na cabeceira?"
@@ -818,6 +1036,7 @@
                         "generic": {
                             "hours_to_show": "Horas para amosar",
                             "manual_description": "Necesitas engadir unha tarxeta personalizada ou só queres escribir manualmente o YAML?",
+                            "maximum": "Máximo",
                             "show_icon": "Amosar icona?",
                             "show_name": "Amosar nome?",
                             "show_state": "Amosar estado?"
@@ -850,11 +1069,11 @@
                             "description": "A tarxeta Rexistro mostra unha lista de eventos das entidades."
                         },
                         "map": {
-                            "description": "A tarxeta de mapa que lle permite amosar funcións nun mapa.",
-                            "hours_to_show": "Horas para amosar"
+                            "description": "A tarxeta de mapa que lle permite amosar funcións nun mapa."
                         },
                         "markdown": {
-                            "description": "A tarxeta Markdown úsase para representar Markdown."
+                            "description": "A tarxeta Markdown úsase para representar Markdown.",
+                            "name": "Markdown"
                         },
                         "media-control": {
                             "description": "A tarxeta Media Control úsase para amosar as entidades do reprodutor multimedia nunha interface con controis fáciles de usar."
@@ -882,6 +1101,16 @@
                             "description": "A tarxeta da lista da compra permíte engadir, editar, marcar e eliminar elementos da súa lista da compra.",
                             "integration_not_loaded": "Esta tarxeta precisa configurar a integración \"Lista de compras\"."
                         },
+                        "statistics-graph": {
+                            "pick_statistic": "Engade unha estatística",
+                            "picked_statistic": "Estatística",
+                            "stat_type_labels": {
+                                "max": "Máximo",
+                                "mean": "Media",
+                                "min": "Mínimo",
+                                "sum": "Suma"
+                            }
+                        },
                         "thermostat": {
                             "description": "A tarxeta de Termostato ofréce o control da súa entidade climática. Permite cambiar a temperatura e o modo da entidade."
                         },
@@ -890,15 +1119,11 @@
                         },
                         "weather-forecast": {
                             "description": "A tarxeta Predición metereolóxica mostra o tempo. Moi útil para incluír nas interfaces que a xente amosa na parede.",
-                            "name": "Predición metereolóxica",
-                            "show_forecast": "Amosar predición"
+                            "name": "Predición metereolóxica"
                         }
                     },
                     "cardpicker": {
                         "by_card": "Por tarxeta"
-                    },
-                    "edit_badges": {
-                        "panel_mode": "Estas insignias non se amosarán porque esta vista está en \"modo de panel\"."
                     },
                     "edit_card": {
                         "add": "Engadir tarxeta",
@@ -913,6 +1138,13 @@
                         "show_code_editor": "Amosar editor de código",
                         "show_visual_editor": "Amosar editor visual",
                         "typed_header": "Configuración da tarxeta {type}"
+                    },
+                    "header-footer": {
+                        "types": {
+                            "graph": {
+                                "name": "Gráfico"
+                            }
+                        }
                     },
                     "menu": {
                         "manage_dashboards": "Xestionar paneis",
@@ -972,6 +1204,13 @@
                 }
             },
             "profile": {
+                "change_password": {
+                    "success": "A contrasinal cambiouse correctamente"
+                },
+                "enable_shortcuts": {
+                    "header": "Atallos de teclado"
+                },
+                "logout_text": "¿Estás seguro de querer cerrar sesión?",
                 "long_lived_access_tokens": {
                     "prompt_copy_token": "Copia o teu token de acceso. Non aparecerá de novo."
                 },

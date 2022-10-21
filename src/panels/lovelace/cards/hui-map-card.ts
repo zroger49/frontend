@@ -17,7 +17,6 @@ import "../../../components/ha-card";
 import "../../../components/ha-icon-button";
 import { fetchRecent } from "../../../data/history";
 import { HomeAssistant } from "../../../types";
-import "../../../components/map/ha-entity-marker";
 import { findEntities } from "../common/find-entities";
 import { processConfigEntities } from "../common/process-config-entities";
 import { EntityConfig } from "../entity-rows/types";
@@ -135,6 +134,7 @@ class HuiMapCard extends LitElement implements LovelaceCard {
             )}
             .zoom=${this._config.default_zoom ?? 14}
             .paths=${this._getHistoryPaths(this._config, this._history)}
+            .autoFit=${this._config.auto_fit}
             .darkMode=${this._config.dark_mode}
           ></ha-map>
           <ha-icon-button
@@ -375,9 +375,6 @@ class HuiMapCard extends LitElement implements LovelaceCard {
 
       #root {
         position: relative;
-      }
-
-      :host([ispanel]) #root {
         height: 100%;
       }
     `;

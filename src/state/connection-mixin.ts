@@ -15,15 +15,19 @@ import { subscribeFrontendUserData } from "../data/frontend";
 import { forwardHaptic } from "../data/haptics";
 import { DEFAULT_PANEL } from "../data/panel";
 import { serviceCallWillDisconnect } from "../data/service";
-import { NumberFormat, TimeFormat } from "../data/translation";
+import { FirstWeekday, NumberFormat, TimeFormat } from "../data/translation";
 import { subscribePanels } from "../data/ws-panels";
 import { translationMetadata } from "../resources/translations-metadata";
-import { Constructor, ServiceCallResponse } from "../types";
+import { Constructor, HomeAssistant, ServiceCallResponse } from "../types";
 import { fetchWithAuth } from "../util/fetch-with-auth";
 import { getState } from "../util/ha-pref-storage";
 import hassCallApi from "../util/hass-call-api";
 import { getLocalLanguage } from "../util/common-translation";
 import { HassBaseEl } from "./hass-base-mixin";
+import { polyfillsLoaded } from "../common/translations/localize";
+import { subscribeAreaRegistry } from "../data/area_registry";
+import { subscribeDeviceRegistry } from "../data/device_registry";
+import { subscribeEntityRegistry } from "../data/entity_registry";
 
 export const connectionMixin = <T extends Constructor<HassBaseEl>>(
   superClass: T
@@ -37,6 +41,9 @@ export const connectionMixin = <T extends Constructor<HassBaseEl>>(
         connection: conn,
         connected: true,
         states: null as any,
+        entities: null as any,
+        devices: null as any,
+        areas: null as any,
         config: null as any,
         themes: null as any,
         selectedTheme: null,
@@ -51,6 +58,7 @@ export const connectionMixin = <T extends Constructor<HassBaseEl>>(
           language,
           number_format: NumberFormat.language,
           time_format: TimeFormat.language,
+          first_weekday: FirstWeekday.language,
         },
         resources: null as any,
         localize: () => "",
@@ -179,7 +187,43 @@ export const connectionMixin = <T extends Constructor<HassBaseEl>>(
       });
 
       subscribeEntities(conn, (states) => this._updateHass({ states }));
-      subscribeConfig(conn, (config) => this._updateHass({ config }));
+      subscribeEntityRegistry(conn, (entityReg) => {
+        const entities: HomeAssistant["entities"] = {};
+        for (const entity of entityReg) {
+          entities[entity.entity_id] = entity;
+        }
+        this._updateHass({ entities });
+      });
+      subscribeDeviceRegistry(conn, (deviceReg) => {
+        const devices: HomeAssistant["devices"] = {};
+        for (const device of deviceReg) {
+          devices[device.id] = device;
+        }
+        this._updateHass({ devices });
+      });
+      subscribeAreaRegistry(conn, (areaReg) => {
+        const areas: HomeAssistant["areas"] = {};
+        for (const area of areaReg) {
+          areas[area.area_id] = area;
+        }
+        this._updateHass({ areas });
+      });
+      subscribeConfig(conn, (config) => {
+        if (this.hass?.config?.time_zone !== config.time_zone) {
+          if (__BUILD__ === "latest" && polyfillsLoaded) {
+            polyfillsLoaded.then(() => {
+              if ("__setDefaultTimeZone" in Intl.DateTimeFormat) {
+                // @ts-ignore
+                Intl.DateTimeFormat.__setDefaultTimeZone(config.time_zone);
+              }
+            });
+          } else if ("__setDefaultTimeZone" in Intl.DateTimeFormat) {
+            // @ts-ignore
+            Intl.DateTimeFormat.__setDefaultTimeZone(config.time_zone);
+          }
+        }
+        this._updateHass({ config });
+      });
       subscribeServices(conn, (services) => this._updateHass({ services }));
       subscribePanels(conn, (panels) => this._updateHass({ panels }));
       subscribeFrontendUserData(conn, "core", (userData) =>

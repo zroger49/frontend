@@ -90,6 +90,14 @@ export const coreCards: Card[] = [
     showElement: true,
   },
   {
+    type: "area",
+    showElement: true,
+  },
+  {
+    type: "tile",
+    showElement: true,
+  },
+  {
     type: "conditional",
   },
   {

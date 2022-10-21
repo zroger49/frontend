@@ -1,3 +1,4 @@
+import "../../../layouts/hass-error-screen";
 import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import {
@@ -7,13 +8,17 @@ import {
   EnergyPreferences,
   getEnergyInfo,
   getEnergyPreferences,
+  getReferencedStatisticIds,
 } from "../../../data/energy";
+import {
+  getStatisticMetadata,
+  StatisticsMetaData,
+} from "../../../data/recorder";
 import "../../../layouts/hass-loading-screen";
-import "../../../layouts/hass-tabs-subpage";
+import "../../../layouts/hass-subpage";
 import { haStyle } from "../../../resources/styles";
 import type { HomeAssistant, Route } from "../../../types";
 import "../../../components/ha-alert";
-import { configSections } from "../ha-panel-config";
 import "./components/ha-energy-device-settings";
 import "./components/ha-energy-grid-settings";
 import "./components/ha-energy-solar-settings";
@@ -47,6 +52,8 @@ class HaConfigEnergy extends LitElement {
 
   @state() private _error?: string;
 
+  @state() private _statsMetadata?: Record<string, StatisticsMetaData>;
+
   protected firstUpdated() {
     this._fetchConfig();
   }
@@ -68,14 +75,13 @@ class HaConfigEnergy extends LitElement {
     }
 
     return html`
-      <hass-tabs-subpage
+      <hass-subpage
         .hass=${this.hass}
         .narrow=${this.narrow}
         .backPath=${this._searchParms.has("historyBack")
           ? undefined
-          : "/config"}
-        .route=${this.route}
-        .tabs=${configSections.experiences}
+          : "/config/lovelace/dashboards"}
+        .header=${this.hass.localize("ui.panel.config.energy.caption")}
       >
         <ha-alert>
           ${this.hass.localize("ui.panel.config.energy.new_device_info")}
@@ -84,36 +90,41 @@ class HaConfigEnergy extends LitElement {
           <ha-energy-grid-settings
             .hass=${this.hass}
             .preferences=${this._preferences!}
-            .validationResult=${this._validationResult!}
+            .statsMetadata=${this._statsMetadata}
+            .validationResult=${this._validationResult}
             @value-changed=${this._prefsChanged}
           ></ha-energy-grid-settings>
           <ha-energy-solar-settings
             .hass=${this.hass}
             .preferences=${this._preferences!}
-            .validationResult=${this._validationResult!}
+            .statsMetadata=${this._statsMetadata}
+            .validationResult=${this._validationResult}
             .info=${this._info}
             @value-changed=${this._prefsChanged}
           ></ha-energy-solar-settings>
           <ha-energy-battery-settings
             .hass=${this.hass}
             .preferences=${this._preferences!}
-            .validationResult=${this._validationResult!}
+            .statsMetadata=${this._statsMetadata}
+            .validationResult=${this._validationResult}
             @value-changed=${this._prefsChanged}
           ></ha-energy-battery-settings>
           <ha-energy-gas-settings
             .hass=${this.hass}
             .preferences=${this._preferences!}
-            .validationResult=${this._validationResult!}
+            .statsMetadata=${this._statsMetadata}
+            .validationResult=${this._validationResult}
             @value-changed=${this._prefsChanged}
           ></ha-energy-gas-settings>
           <ha-energy-device-settings
             .hass=${this.hass}
             .preferences=${this._preferences!}
-            .validationResult=${this._validationResult!}
+            .statsMetadata=${this._statsMetadata}
+            .validationResult=${this._validationResult}
             @value-changed=${this._prefsChanged}
           ></ha-energy-device-settings>
         </div>
-      </hass-tabs-subpage>
+      </hass-subpage>
     `;
   }
 
@@ -137,6 +148,7 @@ class HaConfigEnergy extends LitElement {
       this._error = err.message;
     }
     this._info = await energyInfoPromise;
+    await this._fetchMetaData();
   }
 
   private async _prefsChanged(ev: CustomEvent) {
@@ -148,6 +160,20 @@ class HaConfigEnergy extends LitElement {
       this._error = err.message;
     }
     this._info = await getEnergyInfo(this.hass);
+    await this._fetchMetaData();
+  }
+
+  private async _fetchMetaData() {
+    if (!this._preferences || !this._info) {
+      return;
+    }
+    const statIDs = getReferencedStatisticIds(this._preferences, this._info);
+    const statsMetadataArray = await getStatisticMetadata(this.hass, statIDs);
+    const statsMetadata: Record<string, StatisticsMetaData> = {};
+    statsMetadataArray.forEach((x) => {
+      statsMetadata[x.statistic_id] = x;
+    });
+    this._statsMetadata = statsMetadata;
   }
 
   static get styles(): CSSResultGroup {

@@ -15,13 +15,16 @@ import { computeStateDisplay } from "../../../common/entity/compute_state_displa
 import { computeStateDomain } from "../../../common/entity/compute_state_domain";
 import { computeStateName } from "../../../common/entity/compute_state_name";
 import { isValidEntityId } from "../../../common/entity/valid_entity_id";
-import { formatNumber } from "../../../common/number/format_number";
+import {
+  formatNumber,
+  isNumericState,
+} from "../../../common/number/format_number";
 import { iconColorCSS } from "../../../common/style/icon_color_css";
 import "../../../components/ha-card";
 import "../../../components/ha-icon";
 import { UNAVAILABLE_STATES } from "../../../data/entity";
+import { formatAttributeValue } from "../../../data/entity_attributes";
 import { HomeAssistant } from "../../../types";
-import { formatAttributeValue } from "../../../util/hass-attributes-util";
 import { computeCardSize } from "../common/compute-card-size";
 import { findEntities } from "../common/find-entities";
 import { hasConfigOrEntityChanged } from "../common/has-changed";
@@ -143,7 +146,7 @@ export class HuiEntityCard extends LitElement implements LovelaceCard {
                     stateObj.attributes[this._config.attribute!]
                   )
                 : this.hass.localize("state.default.unknown")
-              : stateObj.attributes.unit_of_measurement
+              : isNumericState(stateObj) || this._config.unit
               ? formatNumber(stateObj.state, this.hass.locale)
               : computeStateDisplay(
                   this.hass.localize,

@@ -8,6 +8,9 @@ import {
   MessageBase,
 } from "home-assistant-js-websocket";
 import { LocalizeFunc } from "./common/translations/localize";
+import { AreaRegistryEntry } from "./data/area_registry";
+import { DeviceRegistryEntry } from "./data/device_registry";
+import { EntityRegistryEntry } from "./data/entity_registry";
 import { CoreFrontendUserData } from "./data/frontend";
 import { FrontendLocaleData, getHassTranslations } from "./data/translation";
 import { Themes } from "./data/ws-themes";
@@ -84,9 +87,12 @@ export interface CurrentUser {
 }
 
 // Currently selected theme and its settings. These are the values stored in local storage.
+// Note: These values are not meant to be used at runtime to check whether dark mode is active
+// or which theme name to use, as this interface represents the config data for the theme picker.
+// The actually active dark mode and theme name can be read from hass.themes.
 export interface ThemeSettings {
   theme: string;
-  // Radio box selection for theme picker. Do not use in cards as
+  // Radio box selection for theme picker. Do not use in Lovelace rendering as
   // it can be undefined == auto.
   // Property hass.themes.darkMode carries effective current mode.
   dark?: boolean;
@@ -148,6 +154,8 @@ export interface TranslationMetadata {
   };
 }
 
+export type TranslationDict = typeof import("./translations/en.json");
+
 export interface IconMetaFile {
   version: string;
   parts: IconMeta[];
@@ -192,6 +200,9 @@ export interface HomeAssistant {
   connection: Connection;
   connected: boolean;
   states: HassEntities;
+  entities: { [id: string]: EntityRegistryEntry };
+  devices: { [id: string]: DeviceRegistryEntry };
+  areas: { [id: string]: AreaRegistryEntry };
   services: HassServices;
   config: HassConfig;
   themes: Themes;

@@ -5,6 +5,7 @@ import {
   FrontendLocaleData,
   NumberFormat,
   TimeFormat,
+  FirstWeekday,
 } from "../../../src/data/translation";
 
 let localeData: FrontendLocaleData;
@@ -19,6 +20,7 @@ describe("computeStateDisplay", () => {
       language: "en",
       number_format: NumberFormat.comma_decimal,
       time_format: TimeFormat.am_pm,
+      first_weekday: FirstWeekday.language,
     };
   });
 
@@ -88,6 +90,20 @@ describe("computeStateDisplay", () => {
       state: "1234.5",
       attributes: {
         unit_of_measurement: "m",
+      },
+    };
+    assert.strictEqual(
+      computeStateDisplay(localize, stateObj, localeData),
+      "1,234.5 m"
+    );
+  });
+
+  it("Localizes and formats numeric sensor value with state_class", () => {
+    const stateObj: any = {
+      entity_id: "sensor.test",
+      state: "1234.5",
+      attributes: {
+        state_class: "measurement",
       },
     };
     assert.strictEqual(

@@ -1,43 +1,48 @@
 import {
-  mdiBattery,
-  mdiBatteryOutline,
-  mdiBatteryCharging,
-  mdiThermometer,
-  mdiSnowflake,
-  mdiServerNetworkOff,
-  mdiServerNetwork,
-  mdiDoorClosed,
-  mdiDoorOpen,
-  mdiGarage,
-  mdiGarageOpen,
-  mdiPowerPlugOff,
-  mdiPowerPlug,
-  mdiCheckCircle,
   mdiAlertCircle,
-  mdiSmoke,
-  mdiFire,
+  mdiBattery,
+  mdiBatteryCharging,
+  mdiBatteryOutline,
   mdiBrightness5,
   mdiBrightness7,
+  mdiCheckboxMarkedCircle,
+  mdiCheckNetworkOutline,
+  mdiCloseNetworkOutline,
+  mdiCheckCircle,
+  mdiCropPortrait,
+  mdiDoorClosed,
+  mdiDoorOpen,
+  mdiFire,
+  mdiGarage,
+  mdiGarageOpen,
+  mdiHome,
+  mdiHomeOutline,
   mdiLock,
   mdiLockOpen,
-  mdiWaterOff,
-  mdiWater,
-  mdiWalk,
-  mdiRun,
-  mdiHomeOutline,
-  mdiHome,
-  mdiSquare,
-  mdiSquareOutline,
-  mdiMusicNoteOff,
   mdiMusicNote,
+  mdiMusicNoteOff,
+  mdiMotionSensor,
+  mdiMotionSensorOff,
   mdiPackage,
   mdiPackageUp,
-  mdiCropPortrait,
+  mdiPlay,
+  mdiPowerPlug,
+  mdiPowerPlugOff,
+  mdiRadioboxBlank,
+  mdiSnowflake,
+  mdiSmokeDetector,
+  mdiSmokeDetectorAlert,
+  mdiSmokeDetectorVariant,
+  mdiSmokeDetectorVariantAlert,
+  mdiSquare,
+  mdiSquareOutline,
+  mdiStop,
+  mdiThermometer,
   mdiVibrate,
+  mdiWater,
+  mdiWaterOff,
   mdiWindowClosed,
   mdiWindowOpen,
-  mdiRadioboxBlank,
-  mdiCheckboxMarkedCircle,
 } from "@mdi/js";
 import { HassEntity } from "home-assistant-js-websocket";
 
@@ -50,10 +55,12 @@ export const binarySensorIcon = (state?: string, stateObj?: HassEntity) => {
       return is_off ? mdiBattery : mdiBatteryOutline;
     case "battery_charging":
       return is_off ? mdiBattery : mdiBatteryCharging;
+    case "carbon_monoxide":
+      return is_off ? mdiSmokeDetector : mdiSmokeDetectorAlert;
     case "cold":
       return is_off ? mdiThermometer : mdiSnowflake;
     case "connectivity":
-      return is_off ? mdiServerNetworkOff : mdiServerNetwork;
+      return is_off ? mdiCloseNetworkOutline : mdiCheckNetworkOutline;
     case "door":
       return is_off ? mdiDoorClosed : mdiDoorOpen;
     case "garage_door":
@@ -66,7 +73,7 @@ export const binarySensorIcon = (state?: string, stateObj?: HassEntity) => {
     case "tamper":
       return is_off ? mdiCheckCircle : mdiAlertCircle;
     case "smoke":
-      return is_off ? mdiCheckCircle : mdiSmoke;
+      return is_off ? mdiSmokeDetectorVariant : mdiSmokeDetectorVariantAlert;
     case "heat":
       return is_off ? mdiThermometer : mdiFire;
     case "light":
@@ -76,7 +83,7 @@ export const binarySensorIcon = (state?: string, stateObj?: HassEntity) => {
     case "moisture":
       return is_off ? mdiWaterOff : mdiWater;
     case "motion":
-      return is_off ? mdiWalk : mdiRun;
+      return is_off ? mdiMotionSensorOff : mdiMotionSensor;
     case "occupancy":
       return is_off ? mdiHomeOutline : mdiHome;
     case "opening":
@@ -85,6 +92,8 @@ export const binarySensorIcon = (state?: string, stateObj?: HassEntity) => {
       return is_off ? mdiPowerPlugOff : mdiPowerPlug;
     case "presence":
       return is_off ? mdiHomeOutline : mdiHome;
+    case "running":
+      return is_off ? mdiStop : mdiPlay;
     case "sound":
       return is_off ? mdiMusicNoteOff : mdiMusicNote;
     case "update":

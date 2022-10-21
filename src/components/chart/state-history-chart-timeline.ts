@@ -2,14 +2,14 @@ import type { ChartData, ChartDataset, ChartOptions } from "chart.js";
 import { HassEntity } from "home-assistant-js-websocket";
 import { css, CSSResultGroup, html, LitElement, PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators";
-import { getColorByIndex } from "../../common/color/colors";
+import { getGraphColorByIndex } from "../../common/color/colors";
 import { formatDateTimeWithSeconds } from "../../common/datetime/format_date_time";
 import { computeDomain } from "../../common/entity/compute_domain";
 import { numberFormatToLocale } from "../../common/number/format_number";
 import { computeRTL } from "../../common/util/compute_rtl";
 import { TimelineEntity } from "../../data/history";
 import { HomeAssistant } from "../../types";
-import "./ha-chart-base";
+import { MIN_TIME_BETWEEN_UPDATES } from "./ha-chart-base";
 import type { TimeLineData } from "./timeline-chart/const";
 
 /** Binary sensor device classes for which the static colors for on/off are NOT inverted.
@@ -24,7 +24,7 @@ const BINARY_SENSOR_DEVICE_CLASS_COLOR_NOT_INVERTED = new Set([
   "plug",
   "power",
   "presence",
-  "update",
+  "running",
 ]);
 
 const STATIC_STATE_COLORS = new Set([
@@ -71,7 +71,7 @@ const getColor = (
     stateColorMap.set(stateString, color);
     return color;
   }
-  const color = getColorByIndex(colorIndex);
+  const color = getGraphColorByIndex(colorIndex, computedStyles);
   colorIndex++;
   stateColorMap.set(stateString, color);
   return color;
@@ -83,6 +83,8 @@ export class StateHistoryChartTimeline extends LitElement {
 
   @property({ attribute: false }) public data: TimelineEntity[] = [];
 
+  @property() public narrow!: boolean;
+
   @property() public names: boolean | Record<string, string> = false;
 
   @property() public unit?: string;
@@ -91,11 +93,17 @@ export class StateHistoryChartTimeline extends LitElement {
 
   @property({ type: Boolean }) public isSingleDevice = false;
 
-  @property({ attribute: false }) public endTime?: Date;
+  @property({ type: Boolean }) public chunked = false;
+
+  @property({ attribute: false }) public startTime!: Date;
+
+  @property({ attribute: false }) public endTime!: Date;
 
   @state() private _chartData?: ChartData<"timeline">;
 
   @state() private _chartOptions?: ChartOptions<"timeline">;
+
+  private _chartTime: Date = new Date();
 
   protected render() {
     return html`
@@ -110,94 +118,119 @@ export class StateHistoryChartTimeline extends LitElement {
 
   public willUpdate(changedProps: PropertyValues) {
     if (!this.hasUpdated) {
-      this._chartOptions = {
-        maintainAspectRatio: false,
-        parsing: false,
-        animation: false,
-        scales: {
-          x: {
-            type: "timeline",
-            position: "bottom",
-            adapters: {
-              date: {
-                locale: this.hass.locale,
-              },
-            },
-            ticks: {
-              autoSkip: true,
-              maxRotation: 0,
-              sampleSize: 5,
-              autoSkipPadding: 20,
-              major: {
-                enabled: true,
-              },
-              font: (context) =>
-                context.tick && context.tick.major
-                  ? ({ weight: "bold" } as any)
-                  : {},
-            },
-            grid: {
-              offset: false,
-            },
-            time: {
-              tooltipFormat: "datetimeseconds",
-            },
-          },
-          y: {
-            type: "category",
-            barThickness: 20,
-            offset: true,
-            grid: {
-              display: false,
-              drawBorder: false,
-              drawTicks: false,
-            },
-            ticks: {
-              display: this.data.length !== 1,
-            },
-            afterSetDimensions: (y) => {
-              y.maxWidth = y.chart.width * 0.18;
-            },
-            position: computeRTL(this.hass) ? "right" : "left",
-          },
-        },
-        plugins: {
-          tooltip: {
-            mode: "nearest",
-            callbacks: {
-              title: (context) =>
-                context![0].chart!.data!.labels![
-                  context[0].datasetIndex
-                ] as string,
-              beforeBody: (context) => context[0].dataset.label || "",
-              label: (item) => {
-                const d = item.dataset.data[item.dataIndex] as TimeLineData;
-                return [
-                  d.label || "",
-                  formatDateTimeWithSeconds(d.start, this.hass.locale),
-                  formatDateTimeWithSeconds(d.end, this.hass.locale),
-                ];
-              },
-              labelColor: (item) => ({
-                borderColor: (item.dataset.data[item.dataIndex] as TimeLineData)
-                  .color!,
-                backgroundColor: (
-                  item.dataset.data[item.dataIndex] as TimeLineData
-                ).color!,
-              }),
-            },
-          },
-          filler: {
-            propagate: true,
-          },
-        },
-        // @ts-expect-error
-        locale: numberFormatToLocale(this.hass.locale),
-      };
+      this._createOptions();
     }
-    if (changedProps.has("data")) {
+
+    if (
+      changedProps.has("data") ||
+      this._chartTime <
+        new Date(this.endTime.getTime() - MIN_TIME_BETWEEN_UPDATES)
+    ) {
+      // If the line is more than 5 minutes old, re-gen it
+      // so the X axis grows even if there is no new data
       this._generateData();
     }
+
+    if (changedProps.has("startTime") || changedProps.has("endTime")) {
+      this._createOptions();
+    }
+  }
+
+  private _createOptions() {
+    const narrow = this.narrow;
+    this._chartOptions = {
+      maintainAspectRatio: false,
+      parsing: false,
+      animation: false,
+      scales: {
+        x: {
+          type: "timeline",
+          position: "bottom",
+          adapters: {
+            date: {
+              locale: this.hass.locale,
+            },
+          },
+          suggestedMin: this.startTime,
+          suggestedMax: this.endTime,
+          ticks: {
+            autoSkip: true,
+            maxRotation: 0,
+            sampleSize: 5,
+            autoSkipPadding: 20,
+            major: {
+              enabled: true,
+            },
+            font: (context) =>
+              context.tick && context.tick.major
+                ? ({ weight: "bold" } as any)
+                : {},
+          },
+          grid: {
+            offset: false,
+          },
+          time: {
+            tooltipFormat: "datetimeseconds",
+          },
+        },
+        y: {
+          type: "category",
+          barThickness: 20,
+          offset: true,
+          grid: {
+            display: false,
+            drawBorder: false,
+            drawTicks: false,
+          },
+          ticks: {
+            display:
+              this.chunked || !this.isSingleDevice || this.data.length !== 1,
+          },
+          afterSetDimensions: (y) => {
+            y.maxWidth = y.chart.width * 0.18;
+          },
+          afterFit: (scaleInstance) => {
+            if (this.chunked) {
+              // ensure all the chart labels are the same width
+              scaleInstance.width = narrow ? 105 : 185;
+            }
+          },
+          position: computeRTL(this.hass) ? "right" : "left",
+        },
+      },
+      plugins: {
+        tooltip: {
+          mode: "nearest",
+          callbacks: {
+            title: (context) =>
+              context![0].chart!.data!.labels![
+                context[0].datasetIndex
+              ] as string,
+            beforeBody: (context) => context[0].dataset.label || "",
+            label: (item) => {
+              const d = item.dataset.data[item.dataIndex] as TimeLineData;
+              return [
+                d.label || "",
+                formatDateTimeWithSeconds(d.start, this.hass.locale),
+                formatDateTimeWithSeconds(d.end, this.hass.locale),
+              ];
+            },
+            labelColor: (item) => ({
+              borderColor: (item.dataset.data[item.dataIndex] as TimeLineData)
+                .color!,
+              backgroundColor: (
+                item.dataset.data[item.dataIndex] as TimeLineData
+              ).color!,
+            }),
+          },
+        },
+        filler: {
+          propagate: true,
+        },
+      },
+      // @ts-expect-error
+      locale: numberFormatToLocale(this.hass.locale),
+    };
   }
 
   private _generateData() {
@@ -208,34 +241,9 @@ export class StateHistoryChartTimeline extends LitElement {
       stateHistory = [];
     }
 
-    const startTime = new Date(
-      stateHistory.reduce(
-        (minTime, stateInfo) =>
-          Math.min(minTime, new Date(stateInfo.data[0].last_changed).getTime()),
-        new Date().getTime()
-      )
-    );
-
-    // end time is Math.max(startTime, last_event)
-    let endTime =
-      this.endTime ||
-      new Date(
-        stateHistory.reduce(
-          (maxTime, stateInfo) =>
-            Math.max(
-              maxTime,
-              new Date(
-                stateInfo.data[stateInfo.data.length - 1].last_changed
-              ).getTime()
-            ),
-          startTime.getTime()
-        )
-      );
-
-    if (endTime > new Date()) {
-      endTime = new Date();
-    }
-
+    this._chartTime = new Date();
+    const startTime = this.startTime;
+    const endTime = this.endTime;
     const labels: string[] = [];
     const datasets: ChartDataset<"timeline">[] = [];
     const names = this.names || {};

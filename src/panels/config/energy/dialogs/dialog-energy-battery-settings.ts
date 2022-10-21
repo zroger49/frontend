@@ -14,8 +14,7 @@ import { EnergySettingsBatteryDialogParams } from "./show-dialogs-energy";
 import "@material/mwc-button/mwc-button";
 import "../../../../components/entity/ha-statistic-picker";
 
-const energyUnits = ["kWh"];
-const energyDeviceClasses = ["energy"];
+const energyUnitClasses = ["energy"];
 
 @customElement("dialog-energy-battery-settings")
 export class DialogEnergyBatterySettings
@@ -67,25 +66,22 @@ export class DialogEnergyBatterySettings
 
         <ha-statistic-picker
           .hass=${this.hass}
-          .includeUnitOfMeasurement=${energyUnits}
-          .includeDeviceClasses=${energyDeviceClasses}
+          .includeUnitClass=${energyUnitClasses}
           .value=${this._source.stat_energy_to}
           .label=${this.hass.localize(
             "ui.panel.config.energy.battery.dialog.energy_into_battery"
           )}
-          entities-only
           @value-changed=${this._statisticToChanged}
+          dialogInitialFocus
         ></ha-statistic-picker>
 
         <ha-statistic-picker
           .hass=${this.hass}
-          .includeUnitOfMeasurement=${energyUnits}
-          .includeDeviceClasses=${energyDeviceClasses}
+          .includeUnitClass=${energyUnitClasses}
           .value=${this._source.stat_energy_from}
           .label=${this.hass.localize(
             "ui.panel.config.energy.battery.dialog.energy_out_of_battery"
           )}
-          entities-only
           @value-changed=${this._statisticFromChanged}
         ></ha-statistic-picker>
 
@@ -128,6 +124,9 @@ export class DialogEnergyBatterySettings
       css`
         ha-dialog {
           --mdc-dialog-max-width: 430px;
+        }
+        ha-statistic-picker {
+          width: 100%;
         }
       `,
     ];

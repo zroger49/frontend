@@ -22,10 +22,11 @@ import {
   Supervisor,
   SupervisorObject,
   supervisorCollection,
+  SupervisorKeys,
 } from "../../src/data/supervisor/supervisor";
 import { ProvideHassLitMixin } from "../../src/mixins/provide-hass-lit-mixin";
 import { urlSyncMixin } from "../../src/state/url-sync-mixin";
-import { HomeAssistant } from "../../src/types";
+import { HomeAssistant, Route } from "../../src/types";
 import { getTranslation } from "../../src/util/common-translation";
 
 declare global {
@@ -38,6 +39,8 @@ declare global {
 export class SupervisorBaseElement extends urlSyncMixin(
   ProvideHassLitMixin(LitElement)
 ) {
+  @property({ attribute: false }) public route?: Route;
+
   @property({ attribute: false }) public supervisor: Partial<Supervisor> = {
     localize: () => "",
   };
@@ -108,7 +111,9 @@ export class SupervisorBaseElement extends urlSyncMixin(
       this._language = this.hass.language;
     }
     this._initializeLocalize();
-    this._initSupervisor();
+    if (this.route?.prefix === "/hassio") {
+      this._initSupervisor();
+    }
   }
 
   private async _initializeLocalize() {
@@ -120,9 +125,13 @@ export class SupervisorBaseElement extends urlSyncMixin(
 
     this.supervisor = {
       ...this.supervisor,
-      localize: await computeLocalize(this.constructor.prototype, language, {
-        [language]: data,
-      }),
+      localize: await computeLocalize<SupervisorKeys>(
+        this.constructor.prototype,
+        language,
+        {
+          [language]: data,
+        }
+      ),
     };
   }
 

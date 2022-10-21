@@ -13,10 +13,7 @@ import {
   energySourcesByType,
   getEnergyDataCollection,
 } from "../../../../data/energy";
-import {
-  calculateStatisticsSumGrowth,
-  calculateStatisticsSumGrowthWithPercentage,
-} from "../../../../data/history";
+import { calculateStatisticsSumGrowth } from "../../../../data/recorder";
 import { SubscribeMixin } from "../../../../mixins/subscribe-mixin";
 import type { HomeAssistant } from "../../../../types";
 import { createEntityNotFoundWarning } from "../../components/hui-warning";
@@ -34,6 +31,8 @@ class HuiEnergyCarbonGaugeCard
   @state() private _config?: EnergyCarbonGaugeCardConfig;
 
   @state() private _data?: EnergyData;
+
+  protected hassSubscribeRequiredHostProps = ["_config"];
 
   public getCardSize(): number {
     return 4;
@@ -86,23 +85,13 @@ class HuiEnergyCarbonGaugeCard
 
     let value: number | undefined;
 
-    if (totalGridConsumption === 0) {
-      value = 100;
-    }
-
-    if (
-      this._data.co2SignalEntity in this._data.stats &&
-      totalGridConsumption
-    ) {
-      const highCarbonEnergy =
-        calculateStatisticsSumGrowthWithPercentage(
-          this._data.stats[this._data.co2SignalEntity],
-          types
-            .grid![0].flow_from.map(
-              (flow) => this._data!.stats![flow.stat_energy_from]
-            )
-            .filter(Boolean)
-        ) || 0;
+    if (this._data.fossilEnergyConsumption && totalGridConsumption) {
+      const highCarbonEnergy = this._data.fossilEnergyConsumption
+        ? Object.values(this._data.fossilEnergyConsumption).reduce(
+            (sum, a) => sum + a,
+            0
+          )
+        : 0;
 
       const totalSolarProduction = types.solar
         ? calculateStatisticsSumGrowth(
@@ -148,12 +137,12 @@ class HuiEnergyCarbonGaugeCard
               ></ha-gauge>
               <div class="name">
                 ${this.hass.localize(
-                  "ui.panel.lovelace.cards.energy.carbon_consumed_gauge.non_fossil_energy_consumed"
+                  "ui.panel.lovelace.cards.energy.carbon_consumed_gauge.low_carbon_energy_consumed"
                 )}
               </div>
             `
           : html`${this.hass.localize(
-              "ui.panel.lovelace.cards.energy.carbon_consumed_gauge.non_fossil_energy_not_calculated"
+              "ui.panel.lovelace.cards.energy.carbon_consumed_gauge.low_carbon_energy_not_calculated"
             )}`}
       </ha-card>
     `;

@@ -35,8 +35,9 @@ export class HuiDialogSuggestCard extends LitElement {
           entityId,
           this.hass.states[entityId],
         ]),
-        {},
-        true
+        {
+          title: params.cardTitle,
+        }
       );
     if (!Object.isFrozen(this._cardConfig)) {
       this._cardConfig = deepFreeze(this._cardConfig);
@@ -84,13 +85,18 @@ export class HuiDialogSuggestCard extends LitElement {
             ? html`
                 <div class="editor">
                   <ha-yaml-editor
+                    .hass=${this.hass}
                     .defaultValue=${this._cardConfig}
                   ></ha-yaml-editor>
                 </div>
               `
             : ""}
         </div>
-        <mwc-button slot="secondaryAction" @click=${this.closeDialog}>
+        <mwc-button
+          slot="secondaryAction"
+          @click=${this.closeDialog}
+          dialogInitialFocus
+        >
           ${this._params.yaml
             ? this.hass!.localize("ui.common.close")
             : this.hass!.localize("ui.common.cancel")}
