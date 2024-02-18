@@ -1,7 +1,8 @@
 import "@material/mwc-button/mwc-button";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../../common/dom/fire_event";
+import "../../../../components/ha-alert";
 import "../../../../components/ha-area-picker";
 import "../../../../components/ha-dialog";
 import type { HaSwitch } from "../../../../components/ha-switch";
@@ -13,7 +14,6 @@ import {
 import { haStyle, haStyleDialog } from "../../../../resources/styles";
 import { HomeAssistant } from "../../../../types";
 import { DeviceRegistryDetailDialogParams } from "./show-dialog-device-registry-detail";
-import "../../../../components/ha-alert";
 
 @customElement("dialog-device-registry-detail")
 class DialogDeviceRegistryDetail extends LitElement {
@@ -48,9 +48,9 @@ class DialogDeviceRegistryDetail extends LitElement {
     fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._params) {
-      return html``;
+      return nothing;
     }
     const device = this._params.device;
     return html`
@@ -67,7 +67,9 @@ class DialogDeviceRegistryDetail extends LitElement {
             <ha-textfield
               .value=${this._nameByUser}
               @input=${this._nameChanged}
-              .label=${this.hass.localize("ui.panel.config.devices.name")}
+              .label=${this.hass.localize(
+                "ui.dialogs.device-registry-detail.name"
+              )}
               .placeholder=${device.name || ""}
               .disabled=${this._submitting}
               dialogInitialFocus
@@ -80,39 +82,41 @@ class DialogDeviceRegistryDetail extends LitElement {
             <div class="row">
               <ha-switch
                 .checked=${!this._disabledBy}
+                .disabled=${this._params.device.disabled_by === "config_entry"}
                 @change=${this._disabledByChanged}
               >
               </ha-switch>
               <div>
                 <div>
                   ${this.hass.localize(
-                    "ui.panel.config.devices.enabled_label",
-                    "type",
-                    this.hass.localize(
-                      `ui.panel.config.devices.type.${
-                        device.entry_type || "device"
-                      }`
-                    )
+                    "ui.dialogs.device-registry-detail.enabled_label",
+                    {
+                      type: this.hass.localize(
+                        `ui.dialogs.device-registry-detail.type.${
+                          device.entry_type || "device"
+                        }`
+                      ),
+                    }
                   )}
                 </div>
                 <div class="secondary">
                   ${this._disabledBy && this._disabledBy !== "user"
                     ? this.hass.localize(
-                        "ui.panel.config.devices.enabled_cause",
-                        "type",
-                        this.hass.localize(
-                          `ui.panel.config.devices.type.${
-                            device.entry_type || "device"
-                          }`
-                        ),
-                        "cause",
-                        this.hass.localize(
-                          `config_entry.disabled_by.${this._disabledBy}`
-                        )
+                        "ui.dialogs.device-registry-detail.enabled_cause",
+                        {
+                          type: this.hass.localize(
+                            `ui.dialogs.device-registry-detail.type.${
+                              device.entry_type || "device"
+                            }`
+                          ),
+                          cause: this.hass.localize(
+                            `config_entry.disabled_by.${this._disabledBy}`
+                          ),
+                        }
                       )
                     : ""}
                   ${this.hass.localize(
-                    "ui.panel.config.devices.enabled_description"
+                    "ui.dialogs.device-registry-detail.enabled_description"
                   )}
                 </div>
               </div>
@@ -131,7 +135,7 @@ class DialogDeviceRegistryDetail extends LitElement {
           @click=${this._updateEntry}
           .disabled=${this._submitting}
         >
-          ${this.hass.localize("ui.panel.config.devices.update")}
+          ${this.hass.localize("ui.dialogs.device-registry-detail.update")}
         </mwc-button>
       </ha-dialog>
     `;
@@ -162,7 +166,7 @@ class DialogDeviceRegistryDetail extends LitElement {
     } catch (err: any) {
       this._error =
         err.message ||
-        this.hass.localize("ui.panel.config.devices.unknown_error");
+        this.hass.localize("ui.dialogs.device-registry-detail.unknown_error");
     } finally {
       this._submitting = false;
     }
@@ -175,6 +179,8 @@ class DialogDeviceRegistryDetail extends LitElement {
       css`
         mwc-button.warning {
           margin-right: auto;
+          margin-inline-end: auto;
+          margin-inline-start: initial;
         }
         ha-textfield {
           display: block;

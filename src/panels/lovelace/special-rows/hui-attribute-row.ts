@@ -1,15 +1,14 @@
 import {
-  css,
   CSSResultGroup,
-  html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  css,
+  html,
+  nothing,
 } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import checkValidDate from "../../../common/datetime/check_valid_date";
-import { formatNumber } from "../../../common/number/format_number";
-import { formatAttributeValue } from "../../../data/entity_attributes";
+import "../../../components/ha-attribute-value";
 import { HomeAssistant } from "../../../types";
 import { hasConfigOrEntityChanged } from "../common/has-changed";
 import "../components/hui-generic-entity-row";
@@ -40,9 +39,9 @@ class HuiAttributeRow extends LitElement implements LovelaceRow {
     return hasConfigOrEntityChanged(this, changedProps);
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._config || !this.hass) {
-      return html``;
+      return nothing;
     }
 
     const stateObj = this.hass.states[this._config.entity];
@@ -71,11 +70,17 @@ class HuiAttributeRow extends LitElement implements LovelaceRow {
               .format=${this._config.format}
               capitalize
             ></hui-timestamp-display>`
-          : typeof attribute === "number"
-          ? formatNumber(attribute, this.hass.locale)
           : attribute !== undefined
-          ? formatAttributeValue(this.hass, attribute)
-          : "—"}
+            ? html`
+                <ha-attribute-value
+                  .hideUnit=${this._config.suffix}
+                  .hass=${this.hass}
+                  .stateObj=${stateObj}
+                  .attribute=${this._config.attribute}
+                >
+                </ha-attribute-value>
+              `
+            : "—"}
         ${this._config.suffix}
       </hui-generic-entity-row>
     `;

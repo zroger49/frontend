@@ -5,7 +5,7 @@ import {
   html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  nothing,
 } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { isComponentLoaded } from "../../../common/config/is_component_loaded";
@@ -31,16 +31,19 @@ class ConfigNetwork extends LitElement {
 
   @state() private _error?: { code: string; message: string };
 
-  protected render(): TemplateResult {
+  protected render() {
     if (
       !this.hass.userData?.showAdvanced ||
       !isComponentLoaded(this.hass, "network")
     ) {
-      return html``;
+      return nothing;
     }
 
     return html`
-      <ha-card outlined header="Network Adapter">
+      <ha-card
+        outlined
+        header=${this.hass.localize("ui.panel.config.network.network_adapter")}
+      >
         <div class="card-content">
           ${this._error
             ? html`
@@ -50,9 +53,9 @@ class ConfigNetwork extends LitElement {
               `
             : ""}
           <p>
-            Configure which network adapters integrations will use. Currently
-            this setting only affects multicast traffic. A restart is required
-            for these settings to apply.
+            ${this.hass.localize(
+              "ui.panel.config.network.network_adapter_info"
+            )}
           </p>
           <ha-network
             @network-config-changed=${this._configChanged}

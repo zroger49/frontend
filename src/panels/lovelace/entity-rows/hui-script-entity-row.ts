@@ -5,10 +5,10 @@ import {
   html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  nothing,
 } from "lit";
 import { customElement, property, state } from "lit/decorators";
-import { UNAVAILABLE_STATES } from "../../../data/entity";
+import { isUnavailableState } from "../../../data/entity";
 import { canRun, ScriptEntity } from "../../../data/script";
 import { HomeAssistant } from "../../../types";
 import { hasConfigOrEntityChanged } from "../common/has-changed";
@@ -33,9 +33,9 @@ class HuiScriptEntityRow extends LitElement implements LovelaceRow {
     return hasConfigOrEntityChanged(this, changedProps);
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._config || !this.hass) {
-      return html``;
+      return nothing;
     }
 
     const stateObj = this.hass.states[this._config.entity] as ScriptEntity;
@@ -53,19 +53,18 @@ class HuiScriptEntityRow extends LitElement implements LovelaceRow {
         ${stateObj.state === "on"
           ? html`<mwc-button @click=${this._cancelScript}>
               ${stateObj.attributes.mode !== "single" &&
-              (stateObj.attributes.current || 0) > 0
-                ? this.hass.localize(
-                    "ui.card.script.cancel_multiple",
-                    "number",
-                    stateObj.attributes.current
-                  )
+              stateObj.attributes.current &&
+              stateObj.attributes.current > 0
+                ? this.hass.localize("ui.card.script.cancel_multiple", {
+                    number: stateObj.attributes.current,
+                  })
                 : this.hass.localize("ui.card.script.cancel")}
             </mwc-button>`
           : ""}
         ${stateObj.state === "off" || stateObj.attributes.max
           ? html`<mwc-button
               @click=${this._runScript}
-              .disabled=${UNAVAILABLE_STATES.includes(stateObj.state) ||
+              .disabled=${isUnavailableState(stateObj.state) ||
               !canRun(stateObj)}
             >
               ${this._config.action_name ||
@@ -80,6 +79,8 @@ class HuiScriptEntityRow extends LitElement implements LovelaceRow {
     return css`
       mwc-button:last-child {
         margin-right: -0.57em;
+        margin-inline-end: -0.57em;
+        margin-inline-start: initial;
       }
     `;
   }

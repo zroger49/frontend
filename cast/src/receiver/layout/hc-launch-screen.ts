@@ -12,7 +12,8 @@ class HcLaunchScreen extends LitElement {
     return html`
       <div class="container">
         <img
-          src="https://www.home-assistant.io/images/blog/2018-09-thinking-big/social.png"
+          alt="Nabu Casa logo on left, Home Assistant logo on right, and red heart in center"
+          src="https://cast.home-assistant.io/images/nabu-loves-hass.png"
         />
         <div class="status">
           ${this.hass ? "Connected" : "Not Connected"}
@@ -27,7 +28,6 @@ class HcLaunchScreen extends LitElement {
       :host {
         display: block;
         height: 100vh;
-        padding-top: 64px;
         background-color: white;
         font-size: 24px;
       }
@@ -35,15 +35,13 @@ class HcLaunchScreen extends LitElement {
         display: flex;
         flex-direction: column;
         text-align: center;
+        align-items: center;
+        height: 100%;
+        justify-content: space-evenly;
       }
       img {
-        width: 717px;
-        height: 376px;
-        display: block;
-        margin: 0 auto;
-      }
-      .status {
-        padding-right: 54px;
+        max-width: 80%;
+        object-fit: cover;
       }
     `;
   }

@@ -1,10 +1,10 @@
 import "@material/mwc-button";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
-import { property, state } from "lit/decorators";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
+import { customElement, property, state } from "lit/decorators";
 import { until } from "lit/directives/until";
 import "../../../src/components/ha-card";
 import "../../../src/components/ha-circular-progress";
-import { LovelaceCardConfig } from "../../../src/data/lovelace";
+import { LovelaceCardConfig } from "../../../src/data/lovelace/config/card";
 import { MockHomeAssistant } from "../../../src/fake_data/provide_hass";
 import { Lovelace, LovelaceCard } from "../../../src/panels/lovelace/types";
 import {
@@ -14,6 +14,7 @@ import {
   setDemoConfig,
 } from "../configs/demo-configs";
 
+@customElement("ha-demo-card")
 export class HADemoCard extends LitElement implements LovelaceCard {
   @property({ attribute: false }) public lovelace?: Lovelace;
 
@@ -29,16 +30,18 @@ export class HADemoCard extends LitElement implements LovelaceCard {
 
   public setConfig(_config: LovelaceCardConfig) {}
 
-  protected render(): TemplateResult {
+  protected render() {
     if (this._hidden) {
-      return html``;
+      return nothing;
     }
     return html`
       <ha-card>
         <div class="picker">
           <div class="label">
             ${this._switching
-              ? html`<ha-circular-progress active></ha-circular-progress>`
+              ? html`<ha-circular-progress
+                  indeterminate
+                ></ha-circular-progress>`
               : until(
                   selectedDemoConfig.then(
                     (conf) => html`
@@ -47,8 +50,7 @@ export class HADemoCard extends LitElement implements LovelaceCard {
                         <a target="_blank" href=${conf.authorUrl}>
                           ${this.hass.localize(
                             "ui.panel.page-demo.cards.demo.demo_by",
-                            "name",
-                            conf.authorName
+                            { name: conf.authorName }
                           )}
                         </a>
                       </small>
@@ -154,5 +156,3 @@ declare global {
     "ha-demo-card": HADemoCard;
   }
 }
-
-customElements.define("ha-demo-card", HADemoCard);

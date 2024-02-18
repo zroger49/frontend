@@ -1,20 +1,40 @@
 import {
+  mdiFan,
+  mdiFire,
+  mdiPower,
+  mdiSnowflake,
+  mdiSunSnowflakeVariant,
+  mdiThermostat,
+  mdiThermostatAuto,
+  mdiWaterPercent,
+} from "@mdi/js";
+import {
   HassEntityAttributeBase,
   HassEntityBase,
 } from "home-assistant-js-websocket";
 
-export type HvacMode =
-  | "off"
-  | "heat"
-  | "cool"
-  | "heat_cool"
-  | "auto"
-  | "dry"
-  | "fan_only";
+export const HVAC_MODES = [
+  "auto",
+  "heat_cool",
+  "heat",
+  "cool",
+  "dry",
+  "fan_only",
+  "off",
+] as const;
+
+export type HvacMode = (typeof HVAC_MODES)[number];
 
 export const CLIMATE_PRESET_NONE = "none";
 
-export type HvacAction = "off" | "heating" | "cooling" | "drying" | "idle";
+export type HvacAction =
+  | "off"
+  | "preheating"
+  | "heating"
+  | "cooling"
+  | "drying"
+  | "idle"
+  | "fan";
 
 export type ClimateEntity = HassEntityBase & {
   attributes: HassEntityAttributeBase & {
@@ -44,23 +64,48 @@ export type ClimateEntity = HassEntityBase & {
   };
 };
 
-export const CLIMATE_SUPPORT_TARGET_TEMPERATURE = 1;
-export const CLIMATE_SUPPORT_TARGET_TEMPERATURE_RANGE = 2;
-export const CLIMATE_SUPPORT_TARGET_HUMIDITY = 4;
-export const CLIMATE_SUPPORT_FAN_MODE = 8;
-export const CLIMATE_SUPPORT_PRESET_MODE = 16;
-export const CLIMATE_SUPPORT_SWING_MODE = 32;
-export const CLIMATE_SUPPORT_AUX_HEAT = 64;
+export const enum ClimateEntityFeature {
+  TARGET_TEMPERATURE = 1,
+  TARGET_TEMPERATURE_RANGE = 2,
+  TARGET_HUMIDITY = 4,
+  FAN_MODE = 8,
+  PRESET_MODE = 16,
+  SWING_MODE = 32,
+  AUX_HEAT = 64,
+  TURN_OFF = 128,
+  TURN_ON = 256,
+}
 
-const hvacModeOrdering: { [key in HvacMode]: number } = {
-  auto: 1,
-  heat_cool: 2,
-  heat: 3,
-  cool: 4,
-  dry: 5,
-  fan_only: 6,
-  off: 7,
-};
+const hvacModeOrdering = HVAC_MODES.reduce(
+  (order, mode, index) => {
+    order[mode] = index;
+    return order;
+  },
+  {} as Record<HvacMode, number>
+);
 
 export const compareClimateHvacModes = (mode1: HvacMode, mode2: HvacMode) =>
   hvacModeOrdering[mode1] - hvacModeOrdering[mode2];
+
+export const CLIMATE_HVAC_ACTION_TO_MODE: Record<HvacAction, HvacMode> = {
+  cooling: "cool",
+  drying: "dry",
+  fan: "fan_only",
+  preheating: "heat",
+  heating: "heat",
+  idle: "off",
+  off: "off",
+};
+
+export const CLIMATE_HVAC_MODE_ICONS: Record<HvacMode, string> = {
+  cool: mdiSnowflake,
+  dry: mdiWaterPercent,
+  fan_only: mdiFan,
+  auto: mdiThermostatAuto,
+  heat: mdiFire,
+  off: mdiPower,
+  heat_cool: mdiSunSnowflakeVariant,
+};
+
+export const climateHvacModeIcon = (mode: string) =>
+  CLIMATE_HVAC_MODE_ICONS[mode] || mdiThermostat;

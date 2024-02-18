@@ -17,11 +17,8 @@ export class HaClickableListItem extends HaListItem {
     const href = this.href || "";
 
     return html`${this.disableHref
-      ? html`<a aria-role="option">${r}</a>`
-      : html`<a
-          aria-role="option"
-          target=${this.openNewTab ? "_blank" : ""}
-          href=${href}
+      ? html`<a>${r}</a>`
+      : html`<a target=${this.openNewTab ? "_blank" : ""} href=${href}
           >${r}</a
         >`}`;
   }
@@ -44,8 +41,6 @@ export class HaClickableListItem extends HaListItem {
           height: 100%;
           display: flex;
           align-items: center;
-          padding-left: var(--mdc-list-side-padding, 20px);
-          padding-right: var(--mdc-list-side-padding, 20px);
           overflow: hidden;
         }
       `,

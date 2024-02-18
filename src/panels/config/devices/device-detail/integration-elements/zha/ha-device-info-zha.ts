@@ -4,7 +4,7 @@ import {
   html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  nothing,
 } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import "../../../../../../components/ha-expansion-panel";
@@ -15,10 +15,10 @@ import { HomeAssistant } from "../../../../../../types";
 import { formatAsPaddedHex } from "../../../../integrations/integration-panels/zha/functions";
 
 @customElement("ha-device-info-zha")
-export class HaDeviceActionsZha extends LitElement {
+export class HaDeviceInfoZha extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public device!: DeviceRegistryEntry;
+  @property({ attribute: false }) public device!: DeviceRegistryEntry;
 
   @state() private _zhaDevice?: ZHADevice;
 
@@ -37,9 +37,9 @@ export class HaDeviceActionsZha extends LitElement {
     }
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._zhaDevice) {
-      return html``;
+      return nothing;
     }
     return html`
       <ha-expansion-panel header="Zigbee info">
@@ -96,5 +96,11 @@ export class HaDeviceActionsZha extends LitElement {
         }
       `,
     ];
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "ha-device-info-zha": HaDeviceInfoZha;
   }
 }

@@ -1,5 +1,5 @@
 import "@material/mwc-button/mwc-button";
-import { CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../common/dom/fire_event";
 import { createCloseHeading } from "../../../components/ha-dialog";
@@ -27,9 +27,9 @@ class DialogIPDetail extends LitElement {
     fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._interface) {
-      return html``;
+      return nothing;
     }
 
     const ipv4 = this._interface.ipv4;
@@ -41,20 +41,49 @@ class DialogIPDetail extends LitElement {
         @closed=${this.closeDialog}
         scrimClickAction
         escapeKeyAction
-        .heading=${createCloseHeading(this.hass, "IP Information")}
+        .heading=${createCloseHeading(
+          this.hass,
+          this.hass.localize("ui.dialogs.dialog-ip-detail.ip_information")
+        )}
       >
         ${ipv4
           ? html`
               <div>
-                <h3>IPv4</h3>
+                <h3>
+                  ${this.hass.localize("ui.dialogs.dialog-ip-detail.ipv4")}
+                </h3>
                 ${ipv4.address
-                  ? html`<div>IP Address: ${ipv4.address?.join(", ")}</div>`
+                  ? html`<div>
+                      ${this.hass.localize(
+                        "ui.dialogs.dialog-ip-detail.ip_address",
+                        { address: ipv4.address?.join(", ") }
+                      )}
+                    </div>`
                   : ""}
-                ${ipv4.gateway ? html`<div>Gateway: ${ipv4.gateway}</div>` : ""}
-                ${ipv4.method ? html`<div>Method: ${ipv4.method}</div>` : ""}
+                ${ipv4.gateway
+                  ? html`<div>
+                      ${this.hass.localize(
+                        "ui.dialogs.dialog-ip-detail.gateway",
+                        { gateway: ipv4.gateway }
+                      )}
+                    </div>`
+                  : ""}
+                ${ipv4.method
+                  ? html`<div>
+                      ${this.hass.localize(
+                        "ui.dialogs.dialog-ip-detail.method",
+                        { method: ipv4.method }
+                      )}
+                    </div>`
+                  : ""}
                 ${ipv4.nameservers?.length
                   ? html`
-                      <div>Name Servers: ${ipv4.nameservers?.join(", ")}</div>
+                      <div>
+                        ${this.hass.localize(
+                          "ui.dialogs.dialog-ip-detail.nameservers",
+                          { nameservers: ipv4.nameservers?.join(", ") }
+                        )}
+                      </div>
                     `
                   : ""}
               </div>
@@ -63,15 +92,41 @@ class DialogIPDetail extends LitElement {
         ${ipv6
           ? html`
               <div>
-                <h3>IPv6</h3>
+                <h3>
+                  ${this.hass.localize("ui.dialogs.dialog-ip-detail.ipv6")}
+                </h3>
                 ${ipv6.address
-                  ? html`<div>IP Address: ${ipv6.address?.join(", ")}</div>`
+                  ? html`<div>
+                      ${this.hass.localize(
+                        "ui.dialogs.dialog-ip-detail.ip_address",
+                        { address: ipv6.address?.join(", ") }
+                      )}
+                    </div>`
                   : ""}
-                ${ipv6.gateway ? html`<div>Gateway: ${ipv6.gateway}</div>` : ""}
-                ${ipv6.method ? html`<div>Method: ${ipv6.method}</div>` : ""}
+                ${ipv6.gateway
+                  ? html`<div>
+                      ${this.hass.localize(
+                        "ui.dialogs.dialog-ip-detail.gateway",
+                        { gateway: ipv6.gateway }
+                      )}
+                    </div>`
+                  : ""}
+                ${ipv6.method
+                  ? html`<div>
+                      ${this.hass.localize(
+                        "ui.dialogs.dialog-ip-detail.method",
+                        { method: ipv6.method }
+                      )}
+                    </div>`
+                  : ""}
                 ${ipv6.nameservers?.length
                   ? html`
-                      <div>Name Servers: ${ipv6.nameservers?.join(", ")}</div>
+                      <div>
+                        ${this.hass.localize(
+                          "ui.dialogs.dialog-ip-detail.nameservers",
+                          { nameservers: ipv6.nameservers?.join(", ") }
+                        )}
+                      </div>
                     `
                   : ""}
               </div>

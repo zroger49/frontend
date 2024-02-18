@@ -36,6 +36,8 @@ export interface Neighbor {
   ieee: string;
   nwk: string;
   lqi: string;
+  depth: string;
+  relationship: string;
 }
 
 export interface ZHADeviceEndpoint {
@@ -71,7 +73,7 @@ export interface ClusterAttributeData {
 export interface AttributeConfigurationStatus {
   id: number;
   name: string;
-  success: boolean | undefined;
+  status: string;
   min: number;
   max: number;
   change: number;
@@ -106,6 +108,7 @@ export interface Command {
   name: string;
   id: number;
   type: string;
+  schema: HaFormSchema[];
 }
 
 export interface ReadAttributeServiceData {
@@ -166,9 +169,16 @@ export interface ZHANetworkBackup {
   node_info: ZHANetworkBackupNodeInfo;
 }
 
+export interface ZHADeviceSettings {
+  path: string;
+  baudrate?: number;
+  flow_control?: string;
+}
+
 export interface ZHANetworkSettings {
   settings: ZHANetworkBackup;
   radio_type: "ezsp" | "znp" | "deconz" | "zigate" | "xbee";
+  device: ZHADeviceSettings;
 }
 
 export interface ZHANetworkBackupAndMetadata {
@@ -373,11 +383,13 @@ export const removeMembersFromGroup = (
 export const addGroup = (
   hass: HomeAssistant,
   groupName: string,
+  groupId?: number,
   membersToAdd?: ZHAGroupMember[]
 ): Promise<ZHAGroup> =>
   hass.callWS({
     type: "zha/group/add",
     group_name: groupName,
+    group_id: groupId,
     members: membersToAdd,
   });
 
@@ -427,6 +439,15 @@ export const listZHANetworkBackups = (
 ): Promise<ZHANetworkBackup[]> =>
   hass.callWS({
     type: "zha/network/backups/list",
+  });
+
+export const changeZHANetworkChannel = (
+  hass: HomeAssistant,
+  newChannel: "auto" | number
+): Promise<void> =>
+  hass.callWS({
+    type: "zha/network/change_channel",
+    new_channel: newChannel,
   });
 
 export const INITIALIZED = "INITIALIZED";

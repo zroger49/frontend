@@ -1,14 +1,13 @@
 import deepFreeze from "deep-freeze";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators";
 import { fireEvent } from "../../../../common/dom/fire_event";
 import "../../../../components/ha-yaml-editor";
 import type { HaYamlEditor } from "../../../../components/ha-yaml-editor";
-import { LovelaceCardConfig } from "../../../../data/lovelace";
+import { LovelaceCardConfig } from "../../../../data/lovelace/config/card";
 import { haStyleDialog } from "../../../../resources/styles";
 import { HomeAssistant } from "../../../../types";
 import { showSaveSuccessToast } from "../../../../util/toast-saved-success";
-import { computeCards } from "../../common/generate-lovelace-config";
 import { addCards } from "../config-util";
 import "./hui-card-preview";
 import { showCreateCardDialog } from "./show-create-card-dialog";
@@ -28,17 +27,7 @@ export class HuiDialogSuggestCard extends LitElement {
 
   public showDialog(params: SuggestCardDialogParams): void {
     this._params = params;
-    this._cardConfig =
-      params.cardConfig ||
-      computeCards(
-        params.entities.map((entityId) => [
-          entityId,
-          this.hass.states[entityId],
-        ]),
-        {
-          title: params.cardTitle,
-        }
-      );
+    this._cardConfig = params.cardConfig;
     if (!Object.isFrozen(this._cardConfig)) {
       this._cardConfig = deepFreeze(this._cardConfig);
     }
@@ -53,9 +42,9 @@ export class HuiDialogSuggestCard extends LitElement {
     fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._params) {
-      return html``;
+      return nothing;
     }
     return html`
       <ha-dialog
@@ -116,8 +105,8 @@ export class HuiDialogSuggestCard extends LitElement {
                 ${this._saving
                   ? html`
                       <ha-circular-progress
-                        active
-                        title="Saving"
+                        indeterminate
+                        aria-label="Saving"
                         size="small"
                       ></ha-circular-progress>
                     `
@@ -149,7 +138,7 @@ export class HuiDialogSuggestCard extends LitElement {
         }
         ha-dialog {
           max-width: 845px;
-          --dialog-z-index: 5;
+          --dialog-z-index: 6;
         }
         .hidden {
           display: none;

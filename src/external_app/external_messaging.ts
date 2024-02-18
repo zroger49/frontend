@@ -1,3 +1,5 @@
+import { AutomationConfig } from "../data/automation";
+
 const CALLBACK_EXTERNAL_BUS = "externalBus";
 
 interface CommandInFlight {
@@ -33,20 +35,34 @@ interface EMOutgoingMessageConfigGet extends EMMessage {
   type: "config/get";
 }
 
+interface EMOutgoingMessageBarCodeScan extends EMMessage {
+  type: "bar_code/scan";
+  title: string;
+  description: string;
+  alternative_option_label?: string;
+}
+
+interface EMOutgoingMessageBarCodeClose extends EMMessage {
+  type: "bar_code/close";
+}
+
+interface EMOutgoingMessageBarCodeNotify extends EMMessage {
+  type: "bar_code/notify";
+  message: string;
+}
+
 interface EMOutgoingMessageMatterCommission extends EMMessage {
   type: "matter/commission";
+}
+
+interface EMOutgoingMessageImportThreadCredentials extends EMMessage {
+  type: "thread/import_credentials";
 }
 
 type EMOutgoingMessageWithAnswer = {
   "config/get": {
     request: EMOutgoingMessageConfigGet;
     response: ExternalConfig;
-  };
-  "matter/commission": {
-    request: EMOutgoingMessageMatterCommission;
-    response: {
-      code: string;
-    };
   };
 };
 
@@ -101,18 +117,32 @@ interface EMOutgoingMessageSidebarShow extends EMMessage {
   type: "sidebar/show";
 }
 
+interface EMOutgoingMessageAssistShow extends EMMessage {
+  type: "assist/show";
+  payload?: {
+    pipeline_id: "preferred" | "last_used" | string;
+    start_listening: boolean;
+  };
+}
+
 type EMOutgoingMessageWithoutAnswer =
-  | EMOutgoingMessageHaptic
-  | EMOutgoingMessageConnectionStatus
+  | EMMessageResultError
+  | EMMessageResultSuccess
   | EMOutgoingMessageAppConfiguration
-  | EMOutgoingMessageTagWrite
-  | EMOutgoingMessageSidebarShow
+  | EMOutgoingMessageAssistShow
+  | EMOutgoingMessageBarCodeClose
+  | EMOutgoingMessageBarCodeNotify
+  | EMOutgoingMessageBarCodeScan
+  | EMOutgoingMessageConnectionStatus
   | EMOutgoingMessageExoplayerPlayHLS
   | EMOutgoingMessageExoplayerResize
   | EMOutgoingMessageExoplayerStop
-  | EMOutgoingMessageThemeUpdate
-  | EMMessageResultSuccess
-  | EMMessageResultError;
+  | EMOutgoingMessageHaptic
+  | EMOutgoingMessageImportThreadCredentials
+  | EMOutgoingMessageMatterCommission
+  | EMOutgoingMessageSidebarShow
+  | EMOutgoingMessageTagWrite
+  | EMOutgoingMessageThemeUpdate;
 
 interface EMIncomingMessageRestart {
   id: number;
@@ -126,9 +156,70 @@ interface EMIncomingMessageShowNotifications {
   command: "notifications/show";
 }
 
+interface EMIncomingMessageToggleSidebar {
+  id: number;
+  type: "command";
+  command: "sidebar/toggle";
+}
+
+interface EMIncomingMessageShowSidebar {
+  id: number;
+  type: "command";
+  command: "sidebar/show";
+}
+
+interface EMIncomingMessageShowAutomationEditor {
+  id: number;
+  type: "command";
+  command: "automation/editor/show";
+  payload?: {
+    config?: Partial<AutomationConfig>;
+  };
+}
+
+export interface EMIncomingMessageBarCodeScanResult {
+  id: number;
+  type: "command";
+  command: "bar_code/scan_result";
+  payload: {
+    // A string decoded from the barcode data.
+    rawValue: string;
+    // https://developer.mozilla.org/en-US/docs/Web/API/Barcode_Detection_API#supported_barcode_formats
+    format:
+      | "aztec"
+      | "code_128"
+      | "code_39"
+      | "code_93"
+      | "codabar"
+      | "data_matrix"
+      | "ean_13"
+      | "ean_8"
+      | "itf"
+      | "pdf417"
+      | "qr_code"
+      | "upc_a"
+      | "upc_e"
+      | "unknown";
+  };
+}
+
+export interface EMIncomingMessageBarCodeScanAborted {
+  id: number;
+  type: "command";
+  command: "bar_code/aborted";
+  payload: {
+    reason: "canceled" | "alternative_options";
+  };
+}
+
 export type EMIncomingMessageCommands =
   | EMIncomingMessageRestart
-  | EMIncomingMessageShowNotifications;
+  | EMIncomingMessageShowNotifications
+  | EMIncomingMessageToggleSidebar
+  | EMIncomingMessageShowSidebar
+  | EMIncomingMessageShowAutomationEditor
+  | EMIncomingMessageBarCodeScanResult
+  | EMIncomingMessageBarCodeScanAborted;
 
 type EMIncomingMessage =
   | EMMessageResultSuccess
@@ -143,6 +234,9 @@ export interface ExternalConfig {
   canWriteTag: boolean;
   hasExoPlayer: boolean;
   canCommissionMatter: boolean;
+  canImportThreadCredentials: boolean;
+  hasAssist: boolean;
+  hasBarCodeScanner: number;
 }
 
 export class ExternalMessaging {

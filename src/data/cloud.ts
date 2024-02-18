@@ -1,7 +1,5 @@
 import { EntityFilter } from "../common/entity/entity_filter";
-import { PlaceholderContainer } from "../panels/config/automation/thingtalk/dialog-thingtalk";
 import { HomeAssistant } from "../types";
-import { AutomationConfig } from "./automation";
 
 interface CloudStatusNotLoggedIn {
   logged_in: false;
@@ -9,37 +7,20 @@ interface CloudStatusNotLoggedIn {
   http_use_ssl: boolean;
 }
 
-export interface GoogleEntityConfig {
-  should_expose?: boolean | null;
-  override_name?: string;
-  aliases?: string[];
-  disable_2fa?: boolean;
-}
-
-export interface AlexaEntityConfig {
-  should_expose?: boolean | null;
-}
-
 export interface CertificateInformation {
   common_name: string;
   expire_date: string;
   fingerprint: string;
+  alternative_names: string[];
 }
 
 export interface CloudPreferences {
   google_enabled: boolean;
   alexa_enabled: boolean;
   remote_enabled: boolean;
+  remote_allow_remote_enable: boolean;
   google_secure_devices_pin: string | undefined;
   cloudhooks: { [webhookId: string]: CloudWebhook };
-  google_default_expose: string[] | null;
-  google_entity_configs: {
-    [entityId: string]: GoogleEntityConfig;
-  };
-  alexa_default_expose: string[] | null;
-  alexa_entity_configs: {
-    [entityId: string]: AlexaEntityConfig;
-  };
   alexa_report_state: boolean;
   google_report_state: boolean;
   tts_default_voice: [string, string];
@@ -59,6 +40,13 @@ export interface CloudStatusLoggedIn {
   remote_domain: string | undefined;
   remote_connected: boolean;
   remote_certificate: undefined | CertificateInformation;
+  remote_certificate_status:
+    | null
+    | "error"
+    | "generating"
+    | "loaded"
+    | "loading"
+    | "ready";
   http_use_ssl: boolean;
   active_subscription: boolean;
 }
@@ -78,20 +66,19 @@ export interface CloudWebhook {
   managed?: boolean;
 }
 
-export interface ThingTalkConversion {
-  config: Partial<AutomationConfig>;
-  placeholders: PlaceholderContainer;
-}
-
 export const cloudLogin = (
   hass: HomeAssistant,
   email: string,
   password: string
 ) =>
-  hass.callApi("POST", "cloud/login", {
-    email,
-    password,
-  });
+  hass.callApi<{ success: boolean; cloud_pipeline?: string }>(
+    "POST",
+    "cloud/login",
+    {
+      email,
+      password,
+    }
+  );
 
 export const cloudLogout = (hass: HomeAssistant) =>
   hass.callApi("POST", "cloud/logout");
@@ -144,20 +131,16 @@ export const disconnectCloudRemote = (hass: HomeAssistant) =>
 export const fetchCloudSubscriptionInfo = (hass: HomeAssistant) =>
   hass.callWS<SubscriptionInfo>({ type: "cloud/subscription" });
 
-export const convertThingTalk = (hass: HomeAssistant, query: string) =>
-  hass.callWS<ThingTalkConversion>({ type: "cloud/thingtalk/convert", query });
-
 export const updateCloudPref = (
   hass: HomeAssistant,
   prefs: {
     google_enabled?: CloudPreferences["google_enabled"];
     alexa_enabled?: CloudPreferences["alexa_enabled"];
-    alexa_default_expose?: CloudPreferences["alexa_default_expose"];
     alexa_report_state?: CloudPreferences["alexa_report_state"];
     google_report_state?: CloudPreferences["google_report_state"];
-    google_default_expose?: CloudPreferences["google_default_expose"];
     google_secure_devices_pin?: CloudPreferences["google_secure_devices_pin"];
     tts_default_voice?: CloudPreferences["tts_default_voice"];
+    remote_allow_remote_enable?: CloudPreferences["remote_allow_remote_enable"];
   }
 ) =>
   hass.callWS({
@@ -167,25 +150,14 @@ export const updateCloudPref = (
 
 export const updateCloudGoogleEntityConfig = (
   hass: HomeAssistant,
-  entityId: string,
-  values: GoogleEntityConfig
+  entity_id: string,
+  disable_2fa: boolean
 ) =>
-  hass.callWS<GoogleEntityConfig>({
+  hass.callWS({
     type: "cloud/google_assistant/entities/update",
-    entity_id: entityId,
-    ...values,
+    entity_id,
+    disable_2fa,
   });
 
 export const cloudSyncGoogleAssistant = (hass: HomeAssistant) =>
   hass.callApi("POST", "cloud/google_actions/sync");
-
-export const updateCloudAlexaEntityConfig = (
-  hass: HomeAssistant,
-  entityId: string,
-  values: AlexaEntityConfig
-) =>
-  hass.callWS<AlexaEntityConfig>({
-    type: "cloud/alexa/entities/update",
-    entity_id: entityId,
-    ...values,
-  });

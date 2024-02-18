@@ -1,24 +1,33 @@
 import {
-  css,
   CSSResultGroup,
-  html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  css,
+  html,
+  nothing,
 } from "lit";
+import { mdiChevronRight } from "@mdi/js";
 import { customElement, property, state } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
-import { throttle } from "../../../common/util/throttle";
-import "../../../components/ha-card";
+import { isComponentLoaded } from "../../../common/config/is_component_loaded";
 import "../../../components/chart/state-history-charts";
-import { CacheConfig, getRecentWithCache } from "../../../data/cached-history";
-import { HistoryResult } from "../../../data/history";
+import "../../../components/ha-alert";
+import "../../../components/ha-card";
+import "../../../components/ha-icon-button";
+import {
+  HistoryResult,
+  computeHistory,
+  subscribeHistoryStatesTimeWindow,
+} from "../../../data/history";
+import { getSensorNumericDeviceClasses } from "../../../data/sensor";
 import { HomeAssistant } from "../../../types";
 import { hasConfigOrEntitiesChanged } from "../common/has-changed";
 import { processConfigEntities } from "../common/process-config-entities";
-import { EntityConfig } from "../entity-rows/types";
 import { LovelaceCard } from "../types";
 import { HistoryGraphCardConfig } from "./types";
+import { createSearchParam } from "../../../common/url/search-params";
+
+export const DEFAULT_HOURS_TO_SHOW = 24;
 
 @customElement("hui-history-graph-card")
 export class HuiHistoryGraphCard extends LitElement implements LovelaceCard {
@@ -38,20 +47,20 @@ export class HuiHistoryGraphCard extends LitElement implements LovelaceCard {
 
   @state() private _config?: HistoryGraphCardConfig;
 
-  private _configEntities?: EntityConfig[];
+  @state() private _error?: { code: string; message: string };
 
   private _names: Record<string, string> = {};
 
-  private _cacheConfig?: CacheConfig;
+  private _entityIds: string[] = [];
 
-  private _fetching = false;
+  private _hoursToShow = DEFAULT_HOURS_TO_SHOW;
 
-  private _throttleGetStateHistory?: () => void;
+  private _interval?: number;
+
+  private _subscribed?: Promise<(() => Promise<void>) | void>;
 
   public getCardSize(): number {
-    return this._config?.title
-      ? 2
-      : 0 + 2 * (this._configEntities?.length || 1);
+    return this._config?.title ? 2 : 0 + 2 * (this._entityIds?.length || 1);
   }
 
   public setConfig(config: HistoryGraphCardConfig): void {
@@ -63,36 +72,94 @@ export class HuiHistoryGraphCard extends LitElement implements LovelaceCard {
       throw new Error("You must include at least one entity");
     }
 
-    this._configEntities = config.entities
+    const configEntities = config.entities
       ? processConfigEntities(config.entities)
       : [];
 
-    const _entities: string[] = [];
-
-    this._configEntities.forEach((entity) => {
-      _entities.push(entity.entity);
+    this._entityIds = [];
+    configEntities.forEach((entity) => {
+      this._entityIds.push(entity.entity);
       if (entity.name) {
         this._names[entity.entity] = entity.name;
       }
     });
 
-    this._throttleGetStateHistory = throttle(() => {
-      this._getStateHistory();
-    }, config.refresh_interval || 10 * 1000);
-
-    this._cacheConfig = {
-      cacheKey: _entities.join(),
-      hoursToShow: config.hours_to_show || 24,
-    };
+    this._hoursToShow = config.hours_to_show || DEFAULT_HOURS_TO_SHOW;
 
     this._config = config;
   }
 
-  protected shouldUpdate(changedProps: PropertyValues): boolean {
-    if (changedProps.has("_stateHistory")) {
-      return true;
+  public connectedCallback() {
+    super.connectedCallback();
+    if (this.hasUpdated) {
+      this._subscribeHistory();
     }
-    return hasConfigOrEntitiesChanged(this, changedProps);
+  }
+
+  public disconnectedCallback() {
+    super.disconnectedCallback();
+    this._unsubscribeHistory();
+  }
+
+  private async _subscribeHistory() {
+    if (!isComponentLoaded(this.hass!, "history") || this._subscribed) {
+      return;
+    }
+
+    const { numeric_device_classes: sensorNumericDeviceClasses } =
+      await getSensorNumericDeviceClasses(this.hass!);
+
+    this._subscribed = subscribeHistoryStatesTimeWindow(
+      this.hass!,
+      (combinedHistory) => {
+        if (!this._subscribed) {
+          // Message came in before we had a chance to unload
+          return;
+        }
+
+        this._stateHistory = computeHistory(
+          this.hass!,
+          combinedHistory,
+          this.hass!.localize,
+          sensorNumericDeviceClasses,
+          this._config?.split_device_classes
+        );
+      },
+      this._hoursToShow,
+      this._entityIds
+    ).catch((err) => {
+      this._subscribed = undefined;
+      this._error = err;
+    });
+    this._setRedrawTimer();
+  }
+
+  private _redrawGraph() {
+    if (this._stateHistory) {
+      this._stateHistory = { ...this._stateHistory };
+    }
+  }
+
+  private _setRedrawTimer() {
+    // redraw the graph every minute to update the time axis
+    clearInterval(this._interval);
+    this._interval = window.setInterval(() => this._redrawGraph(), 1000 * 60);
+  }
+
+  private _unsubscribeHistory() {
+    clearInterval(this._interval);
+    if (this._subscribed) {
+      this._subscribed.then((unsub) => unsub?.());
+      this._subscribed = undefined;
+    }
+  }
+
+  protected shouldUpdate(changedProps: PropertyValues): boolean {
+    return (
+      hasConfigOrEntitiesChanged(this, changedProps) ||
+      changedProps.size > 1 ||
+      !changedProps.has("hass")
+    );
   }
 
   protected updated(changedProps: PropertyValues) {
@@ -100,8 +167,8 @@ export class HuiHistoryGraphCard extends LitElement implements LovelaceCard {
     if (
       !this._config ||
       !this.hass ||
-      !this._throttleGetStateHistory ||
-      !this._cacheConfig
+      !this._hoursToShow ||
+      !this._entityIds.length
     ) {
       return;
     }
@@ -119,62 +186,81 @@ export class HuiHistoryGraphCard extends LitElement implements LovelaceCard {
       (oldConfig?.entities !== this._config.entities ||
         oldConfig?.hours_to_show !== this._config.hours_to_show)
     ) {
-      this._throttleGetStateHistory();
-    } else if (changedProps.has("hass")) {
-      // wait for commit of data (we only account for the default setting of 1 sec)
-      setTimeout(this._throttleGetStateHistory, 1000);
+      this._unsubscribeHistory();
+      this._subscribeHistory();
     }
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.hass || !this._config) {
-      return html``;
+      return nothing;
     }
+    const now = new Date();
+    now.setHours(now.getHours() - this._hoursToShow);
+    const configUrl = `/history?${createSearchParam({
+      entity_id: this._entityIds.join(","),
+      start_date: now.toISOString(),
+    })}`;
 
     return html`
-      <ha-card .header=${this._config.title}>
+      <ha-card>
+        ${this._config.title
+          ? html`
+              <h1 class="card-header">
+                ${this._config.title}
+                <a href=${configUrl}
+                  ><ha-icon-button .path=${mdiChevronRight}></ha-icon-button
+                ></a>
+              </h1>
+            `
+          : nothing}
         <div
           class="content ${classMap({
             "has-header": !!this._config.title,
           })}"
         >
-          <state-history-charts
-            .hass=${this.hass}
-            .isLoadingData=${!this._stateHistory}
-            .historyData=${this._stateHistory}
-            .names=${this._names}
-            up-to-now
-            no-single
-          ></state-history-charts>
+          ${this._error
+            ? html`
+                <ha-alert alert-type="error">
+                  ${this.hass.localize("ui.components.history_charts.error")}:
+                  ${this._error.message || this._error.code}
+                </ha-alert>
+              `
+            : html`
+                <state-history-charts
+                  .hass=${this.hass}
+                  .isLoadingData=${!this._stateHistory}
+                  .historyData=${this._stateHistory}
+                  .names=${this._names}
+                  up-to-now
+                  .hoursToShow=${this._hoursToShow}
+                  .showNames=${this._config.show_names !== undefined
+                    ? this._config.show_names
+                    : true}
+                  .logarithmicScale=${this._config.logarithmic_scale || false}
+                  .minYAxis=${this._config.min_y_axis}
+                  .maxYAxis=${this._config.max_y_axis}
+                  .fitYData=${this._config.fit_y_data || false}
+                ></state-history-charts>
+              `}
         </div>
       </ha-card>
     `;
-  }
-
-  private async _getStateHistory(): Promise<void> {
-    if (this._fetching) {
-      return;
-    }
-    this._fetching = true;
-    try {
-      this._stateHistory = {
-        ...(await getRecentWithCache(
-          this.hass!,
-          this._cacheConfig!.cacheKey,
-          this._cacheConfig!,
-          this.hass!.localize,
-          this.hass!.language
-        )),
-      };
-    } finally {
-      this._fetching = false;
-    }
   }
 
   static get styles(): CSSResultGroup {
     return css`
       ha-card {
         height: 100%;
+      }
+      .card-header {
+        justify-content: space-between;
+        display: flex;
+      }
+      .card-header ha-icon-button {
+        --mdc-icon-button-size: 24px;
+        line-height: 24px;
+        color: var(--primary-text-color);
       }
       .content {
         padding: 16px;

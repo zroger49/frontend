@@ -16,6 +16,7 @@ export interface BlueprintMetaData {
   input?: Record<string, BlueprintInput | null>;
   description?: string;
   source_url?: string;
+  author?: string;
 }
 
 export interface BlueprintInput {
@@ -28,6 +29,7 @@ export interface BlueprintInput {
 export interface BlueprintImportResult {
   suggested_filename: string;
   raw_data: string;
+  exists?: boolean;
   blueprint: Blueprint;
   validation_errors: string[] | null;
 }
@@ -43,7 +45,8 @@ export const saveBlueprint = (
   domain: BlueprintDomain,
   path: string,
   yaml: string,
-  source_url?: string
+  source_url?: string,
+  allow_override?: boolean
 ) =>
   hass.callWS({
     type: "blueprint/save",
@@ -51,6 +54,7 @@ export const saveBlueprint = (
     path,
     yaml,
     source_url,
+    allow_override,
   });
 
 export const deleteBlueprint = (
@@ -63,3 +67,19 @@ export const deleteBlueprint = (
     domain,
     path,
   });
+
+export type BlueprintSourceType = "local" | "community" | "homeassistant";
+
+export const getBlueprintSourceType = (
+  blueprint: Blueprint
+): BlueprintSourceType => {
+  const sourceUrl = blueprint.metadata.source_url;
+
+  if (!sourceUrl) {
+    return "local";
+  }
+  if (sourceUrl.includes("github.com/home-assistant")) {
+    return "homeassistant";
+  }
+  return "community";
+};

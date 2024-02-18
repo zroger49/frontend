@@ -1,10 +1,10 @@
 import "@material/mwc-list/mwc-list-item";
-import "../components/ha-select";
 import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators";
 import { stopPropagation } from "../common/dom/stop_propagation";
 import { computeStateName } from "../common/entity/compute_state_name";
 import "../components/entity/state-badge";
+import "../components/ha-select";
 import { UNAVAILABLE } from "../data/entity";
 import { SelectEntity, setSelectOption } from "../data/select";
 import type { HomeAssistant } from "../types";
@@ -13,11 +13,11 @@ import type { HomeAssistant } from "../types";
 class StateCardSelect extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public stateObj!: SelectEntity;
+  @property({ attribute: false }) public stateObj!: SelectEntity;
 
   protected render(): TemplateResult {
     return html`
-      <state-badge .stateObj=${this.stateObj}></state-badge>
+      <state-badge .hass=${this.hass} .stateObj=${this.stateObj}></state-badge>
       <ha-select
         .value=${this.stateObj.state}
         .label=${computeStateName(this.stateObj)}
@@ -28,17 +28,11 @@ class StateCardSelect extends LitElement {
         @closed=${stopPropagation}
       >
         ${this.stateObj.attributes.options.map(
-          (option) =>
-            html`
-              <mwc-list-item .value=${option}>
-                ${(this.stateObj.attributes.device_class &&
-                  this.hass.localize(
-                    `component.select.state.${this.stateObj.attributes.device_class}.${option}`
-                  )) ||
-                this.hass.localize(`component.select.state._.${option}`) ||
-                option}
-              </mwc-list-item>
-            `
+          (option) => html`
+            <mwc-list-item .value=${option}>
+              ${this.hass.formatEntityState(this.stateObj, option)}
+            </mwc-list-item>
+          `
         )}
       </ha-select>
     `;

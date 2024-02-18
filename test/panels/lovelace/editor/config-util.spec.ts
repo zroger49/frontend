@@ -5,7 +5,7 @@ import {
   moveCard,
   swapView,
 } from "../../../../src/panels/lovelace/editor/config-util";
-import { LovelaceConfig } from "../../../../src/data/lovelace";
+import { LovelaceConfig } from "../../../../src/data/lovelace/config/types";
 
 describe("swapCard", () => {
   it("swaps 2 cards in same view", () => {
@@ -126,7 +126,7 @@ describe("moveCard", () => {
     assert.throws(
       result,
       Error,
-      "You can not move a card to the view it is in."
+      "You cannot move a card to the view it is in."
     );
   });
 });

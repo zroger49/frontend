@@ -1,8 +1,8 @@
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
+import { repeat } from "lit/directives/repeat";
 import { fireEvent } from "../../common/dom/fire_event";
-import type { PolymerChangedEvent } from "../../polymer-types";
-import type { HomeAssistant } from "../../types";
+import type { ValueChangedEvent, HomeAssistant } from "../../types";
 import "./ha-statistic-picker";
 
 @customElement("ha-statistics-picker")
@@ -22,6 +22,9 @@ class HaStatisticsPicker extends LitElement {
   @property({ attribute: "pick-statistic-label" })
   public pickStatisticLabel?: string;
 
+  @property({ type: Boolean, attribute: "allow-custom-entity" })
+  public allowCustomEntity;
+
   /**
    * Show only statistics natively stored with these units of measurements.
    * @attr include-statistics-unit-of-measurement
@@ -39,6 +42,13 @@ class HaStatisticsPicker extends LitElement {
   public includeUnitClass?: string | string[];
 
   /**
+   * Show only statistics with these device classes.
+   * @attr include-device-class
+   */
+  @property({ attribute: "include-device-class" })
+  public includeDeviceClass?: string | string[];
+
+  /**
    * Ignore filtering of statistics type and units when only a single statistic is selected.
    * @type {boolean}
    * @attr ignore-restrictions-on-first-statistic
@@ -49,9 +59,9 @@ class HaStatisticsPicker extends LitElement {
   })
   public ignoreRestrictionsOnFirstStatistic = false;
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.hass) {
-      return html``;
+      return nothing;
     }
 
     const ignoreRestriction =
@@ -64,12 +74,17 @@ class HaStatisticsPicker extends LitElement {
     const includeUnitClassCurrent = ignoreRestriction
       ? undefined
       : this.includeUnitClass;
+    const includeDeviceClassCurrent = ignoreRestriction
+      ? undefined
+      : this.includeDeviceClass;
     const includeStatisticTypesCurrent = ignoreRestriction
       ? undefined
       : this.statisticTypes;
 
     return html`
-      ${this._currentStatistics.map(
+      ${repeat(
+        this._currentStatistics,
+        (statisticId) => statisticId,
         (statisticId) => html`
           <div>
             <ha-statistic-picker
@@ -77,10 +92,13 @@ class HaStatisticsPicker extends LitElement {
               .hass=${this.hass}
               .includeStatisticsUnitOfMeasurement=${includeStatisticsUnitCurrent}
               .includeUnitClass=${includeUnitClassCurrent}
+              .includeDeviceClass=${includeDeviceClassCurrent}
               .value=${statisticId}
               .statisticTypes=${includeStatisticTypesCurrent}
               .statisticIds=${this.statisticIds}
               .label=${this.pickedStatisticLabel}
+              .excludeStatistics=${this.value}
+              .allowCustomEntity=${this.allowCustomEntity}
               @value-changed=${this._statisticChanged}
             ></ha-statistic-picker>
           </div>
@@ -92,9 +110,12 @@ class HaStatisticsPicker extends LitElement {
           .includeStatisticsUnitOfMeasurement=${this
             .includeStatisticsUnitOfMeasurement}
           .includeUnitClass=${this.includeUnitClass}
+          .includeDeviceClass=${this.includeDeviceClass}
           .statisticTypes=${this.statisticTypes}
           .statisticIds=${this.statisticIds}
           .label=${this.pickStatisticLabel}
+          .excludeStatistics=${this.value}
+          .allowCustomEntity=${this.allowCustomEntity}
           @value-changed=${this._addStatistic}
         ></ha-statistic-picker>
       </div>
@@ -113,7 +134,7 @@ class HaStatisticsPicker extends LitElement {
     });
   }
 
-  private _statisticChanged(event: PolymerChangedEvent<string>) {
+  private _statisticChanged(event: ValueChangedEvent<string>) {
     event.stopPropagation();
     const oldValue = (event.currentTarget as any).curValue;
     const newValue = event.detail.value;
@@ -132,7 +153,7 @@ class HaStatisticsPicker extends LitElement {
     );
   }
 
-  private async _addStatistic(event: PolymerChangedEvent<string>) {
+  private async _addStatistic(event: ValueChangedEvent<string>) {
     event.stopPropagation();
     const toAdd = event.detail.value;
     if (!toAdd) {

@@ -6,13 +6,13 @@ import {
   html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  nothing,
 } from "lit";
 import { customElement, property } from "lit/decorators";
 import { fireEvent } from "../../../common/dom/fire_event";
 import "../../../components/ha-card";
 import "../../../components/ha-circular-progress";
-import { LovelaceCardConfig } from "../../../data/lovelace";
+import { LovelaceCardConfig } from "../../../data/lovelace/config/card";
 import { HomeAssistant } from "../../../types";
 import { LovelaceCard } from "../types";
 
@@ -39,14 +39,14 @@ export class HuiStartingCard extends LitElement implements LovelaceCard {
     }
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.hass) {
-      return html``;
+      return nothing;
     }
 
     return html`
       <div class="content">
-        <ha-circular-progress active></ha-circular-progress>
+        <ha-circular-progress indeterminate></ha-circular-progress>
         ${this.hass.localize("ui.panel.lovelace.cards.starting.description")}
       </div>
     `;
@@ -59,7 +59,7 @@ export class HuiStartingCard extends LitElement implements LovelaceCard {
         height: calc(100vh - var(--header-height));
       }
       ha-circular-progress {
-        padding-bottom: 20px;
+        margin-bottom: 20px;
       }
       .content {
         height: 100%;

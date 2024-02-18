@@ -1,57 +1,28 @@
+import { mdiDotsVertical } from "@mdi/js";
 import {
-  mdiAutorenew,
-  mdiCalendarSync,
-  mdiDotsVertical,
-  mdiFan,
-  mdiFire,
-  mdiPower,
-  mdiSnowflake,
-  mdiWaterPercent,
-} from "@mdi/js";
-import "@thomasloven/round-slider";
-import { HassEntity } from "home-assistant-js-websocket";
-import {
-  css,
   CSSResultGroup,
-  html,
   LitElement,
   PropertyValues,
-  svg,
-  TemplateResult,
+  css,
+  html,
+  nothing,
 } from "lit";
-import { customElement, property, query, state } from "lit/decorators";
-import { classMap } from "lit/directives/class-map";
-import { UNIT_F } from "../../../common/const";
+import { customElement, property, state } from "lit/decorators";
+import { styleMap } from "lit/directives/style-map";
 import { applyThemesOnElement } from "../../../common/dom/apply_themes_on_element";
 import { fireEvent } from "../../../common/dom/fire_event";
 import { computeStateName } from "../../../common/entity/compute_state_name";
-import { formatNumber } from "../../../common/number/format_number";
+import { stateColorCss } from "../../../common/entity/state_color";
 import "../../../components/ha-card";
-import type { HaCard } from "../../../components/ha-card";
 import "../../../components/ha-icon-button";
-import {
-  ClimateEntity,
-  CLIMATE_PRESET_NONE,
-  compareClimateHvacModes,
-  HvacMode,
-} from "../../../data/climate";
-import { UNAVAILABLE } from "../../../data/entity";
+import { ClimateEntity } from "../../../data/climate";
+import "../../../state-control/climate/ha-state-control-climate-temperature";
 import { HomeAssistant } from "../../../types";
 import { findEntities } from "../common/find-entities";
-import { hasConfigOrEntityChanged } from "../common/has-changed";
 import { createEntityNotFoundWarning } from "../components/hui-warning";
+import "../card-features/hui-card-features";
 import { LovelaceCard, LovelaceCardEditor } from "../types";
 import { ThermostatCardConfig } from "./types";
-
-const modeIcons: { [mode in HvacMode]: string } = {
-  auto: mdiCalendarSync,
-  heat_cool: mdiAutorenew,
-  heat: mdiFire,
-  cool: mdiSnowflake,
-  off: mdiPower,
-  fan_only: mdiFan,
-  dry: mdiWaterPercent,
-};
 
 @customElement("hui-thermostat-card")
 export class HuiThermostatCard extends LitElement implements LovelaceCard {
@@ -82,10 +53,6 @@ export class HuiThermostatCard extends LitElement implements LovelaceCard {
 
   @state() private _config?: ThermostatCardConfig;
 
-  @state() private _setTemp?: number | number[];
-
-  @query("ha-card") private _card?: HaCard;
-
   public getCardSize(): number {
     return 7;
   }
@@ -98,185 +65,10 @@ export class HuiThermostatCard extends LitElement implements LovelaceCard {
     this._config = config;
   }
 
-  protected render(): TemplateResult {
-    if (!this.hass || !this._config) {
-      return html``;
-    }
-    const stateObj = this.hass.states[this._config.entity] as ClimateEntity;
-
-    if (!stateObj) {
-      return html`
-        <hui-warning>
-          ${createEntityNotFoundWarning(this.hass, this._config.entity)}
-        </hui-warning>
-      `;
-    }
-
-    const mode = stateObj.state in modeIcons ? stateObj.state : "unknown-mode";
-    const name =
-      this._config!.name ||
-      computeStateName(this.hass!.states[this._config!.entity]);
-    const targetTemp =
-      stateObj.attributes.temperature !== null &&
-      Number.isFinite(Number(stateObj.attributes.temperature))
-        ? stateObj.attributes.temperature
-        : stateObj.attributes.min_temp;
-
-    const slider =
-      stateObj.state === UNAVAILABLE
-        ? html` <round-slider disabled="true"></round-slider> `
-        : html`
-            <round-slider
-              .value=${targetTemp}
-              .low=${stateObj.attributes.target_temp_low}
-              .high=${stateObj.attributes.target_temp_high}
-              .min=${stateObj.attributes.min_temp}
-              .max=${stateObj.attributes.max_temp}
-              .step=${this._stepSize}
-              @value-changing=${this._dragEvent}
-              @value-changed=${this._setTemperature}
-            ></round-slider>
-          `;
-
-    const currentTemperature = svg`
-        <svg viewBox="0 0 40 20">
-          <text
-            x="50%"
-            dx="1"
-            y="60%"
-            text-anchor="middle"
-            style="font-size: 13px;"
-          >
-            ${
-              stateObj.attributes.current_temperature !== null &&
-              !isNaN(stateObj.attributes.current_temperature)
-                ? svg`${formatNumber(
-                    stateObj.attributes.current_temperature,
-                    this.hass.locale
-                  )}
-            <tspan dx="-3" dy="-6.5" style="font-size: 4px;">
-              ${this.hass.config.unit_system.temperature}
-            </tspan>`
-                : ""
-            }
-          </text>
-        </svg>
-      `;
-
-    const setValues = svg`
-      <svg id="set-values">
-        <g>
-          <text text-anchor="middle" class="set-value">
-            ${
-              stateObj.state === UNAVAILABLE
-                ? this.hass.localize("state.default.unavailable")
-                : this._setTemp === undefined || this._setTemp === null
-                ? ""
-                : Array.isArray(this._setTemp)
-                ? this._stepSize === 1
-                  ? svg`
-                      ${formatNumber(this._setTemp[0], this.hass.locale, {
-                        maximumFractionDigits: 0,
-                      })} -
-                      ${formatNumber(this._setTemp[1], this.hass.locale, {
-                        maximumFractionDigits: 0,
-                      })}
-                      `
-                  : svg`
-                      ${formatNumber(this._setTemp[0], this.hass.locale, {
-                        minimumFractionDigits: 1,
-                        maximumFractionDigits: 1,
-                      })} -
-                      ${formatNumber(this._setTemp[1], this.hass.locale, {
-                        minimumFractionDigits: 1,
-                        maximumFractionDigits: 1,
-                      })}
-                      `
-                : this._stepSize === 1
-                ? svg`
-                      ${formatNumber(this._setTemp, this.hass.locale, {
-                        maximumFractionDigits: 0,
-                      })}
-                      `
-                : svg`
-                      ${formatNumber(this._setTemp, this.hass.locale, {
-                        minimumFractionDigits: 1,
-                        maximumFractionDigits: 1,
-                      })}
-                      `
-            }
-          </text>
-          <text
-            dy="22"
-            text-anchor="middle"
-            id="set-mode"
-          >
-            ${
-              stateObj.attributes.hvac_action
-                ? this.hass!.localize(
-                    `state_attributes.climate.hvac_action.${stateObj.attributes.hvac_action}`
-                  )
-                : this.hass!.localize(
-                    `component.climate.state._.${stateObj.state}`
-                  )
-            }
-            ${
-              stateObj.attributes.preset_mode &&
-              stateObj.attributes.preset_mode !== CLIMATE_PRESET_NONE
-                ? html`
-                    -
-                    ${this.hass!.localize(
-                      `state_attributes.climate.preset_mode.${stateObj.attributes.preset_mode}`
-                    ) || stateObj.attributes.preset_mode}
-                  `
-                : ""
-            }
-          </text>
-        </g>
-      </svg>
-    `;
-
-    return html`
-      <ha-card
-        class=${classMap({
-          [mode]: true,
-        })}
-      >
-        <ha-icon-button
-          class="more-info"
-          .label=${this.hass!.localize(
-            "ui.panel.lovelace.cards.show_more_info"
-          )}
-          .path=${mdiDotsVertical}
-          @click=${this._handleMoreInfo}
-          tabindex="0"
-        ></ha-icon-button>
-
-        <div class="content">
-          <div id="controls">
-            <div id="slider">
-              ${slider}
-              <div id="slider-center">
-                <div id="temperature">${currentTemperature} ${setValues}</div>
-              </div>
-            </div>
-          </div>
-          <div id="info" .title=${name}>
-            <div id="modes">
-              ${(stateObj.attributes.hvac_modes || [])
-                .concat()
-                .sort(compareClimateHvacModes)
-                .map((modeItem) => this._renderIcon(modeItem, mode))}
-            </div>
-            ${name}
-          </div>
-        </div>
-      </ha-card>
-    `;
-  }
-
-  protected shouldUpdate(changedProps: PropertyValues): boolean {
-    return hasConfigOrEntityChanged(this, changedProps);
+  private _handleMoreInfo() {
+    fireEvent(this, "hass-more-info", {
+      entityId: this._config!.entity,
+    });
   }
 
   protected updated(changedProps: PropertyValues): void {
@@ -303,193 +95,88 @@ export class HuiThermostatCard extends LitElement implements LovelaceCard {
     ) {
       applyThemesOnElement(this, this.hass.themes, this._config.theme);
     }
+  }
 
-    const stateObj = this.hass.states[this._config.entity];
+  protected render() {
+    if (!this.hass || !this._config) {
+      return nothing;
+    }
+    const stateObj = this.hass.states[this._config.entity] as ClimateEntity;
+
     if (!stateObj) {
-      return;
+      return html`
+        <hui-warning>
+          ${createEntityNotFoundWarning(this.hass, this._config.entity)}
+        </hui-warning>
+      `;
     }
 
-    if (!oldHass || oldHass.states[this._config.entity] !== stateObj) {
-      this._rescale_svg();
-    }
-  }
+    const name = this._config!.name || computeStateName(stateObj);
 
-  public willUpdate(changedProps: PropertyValues) {
-    if (!this.hass || !this._config || !changedProps.has("hass")) {
-      return;
-    }
+    const color = stateColorCss(stateObj);
 
-    const stateObj = this.hass.states[this._config.entity];
-    if (!stateObj) {
-      return;
-    }
-
-    const oldHass = changedProps.get("hass") as HomeAssistant | undefined;
-
-    if (!oldHass || oldHass.states[this._config.entity] !== stateObj) {
-      this._setTemp = this._getSetTemp(stateObj);
-    }
-  }
-
-  private _rescale_svg() {
-    // Set the viewbox of the SVG containing the set temperature to perfectly
-    // fit the text
-    // That way it will auto-scale correctly
-    // This is not done to the SVG containing the current temperature, because
-    // it should not be centered on the text, but only on the value
-    const card = this._card;
-    if (card) {
-      card.updateComplete.then(() => {
-        const svgRoot = this.shadowRoot!.querySelector("#set-values")!;
-        const box = svgRoot.querySelector("g")!.getBBox()!;
-        svgRoot.setAttribute(
-          "viewBox",
-          `${box.x} ${box!.y} ${box.width} ${box.height}`
-        );
-        svgRoot.setAttribute("width", `${box.width}`);
-        svgRoot.setAttribute("height", `${box.height}`);
-      });
-    }
-  }
-
-  private get _stepSize(): number {
-    const stateObj = this.hass!.states[this._config!.entity] as ClimateEntity;
-
-    if (stateObj.attributes.target_temp_step) {
-      return stateObj.attributes.target_temp_step;
-    }
-    return this.hass!.config.unit_system.temperature === UNIT_F ? 1 : 0.5;
-  }
-
-  private _getSetTemp(
-    stateObj: HassEntity
-  ): undefined | number | [number, number] {
-    if (stateObj.state === UNAVAILABLE) {
-      return undefined;
-    }
-
-    if (
-      stateObj.attributes.target_temp_low &&
-      stateObj.attributes.target_temp_high
-    ) {
-      return [
-        stateObj.attributes.target_temp_low,
-        stateObj.attributes.target_temp_high,
-      ];
-    }
-
-    return stateObj.attributes.temperature;
-  }
-
-  private _dragEvent(e): void {
-    const stateObj = this.hass!.states[this._config!.entity] as ClimateEntity;
-
-    if (e.detail.low) {
-      this._setTemp = [e.detail.low, stateObj.attributes.target_temp_high];
-    } else if (e.detail.high) {
-      this._setTemp = [stateObj.attributes.target_temp_low, e.detail.high];
-    } else {
-      this._setTemp = e.detail.value;
-    }
-  }
-
-  private _setTemperature(e): void {
-    const stateObj = this.hass!.states[this._config!.entity] as ClimateEntity;
-
-    if (e.detail.low) {
-      this.hass!.callService("climate", "set_temperature", {
-        entity_id: this._config!.entity,
-        target_temp_low: e.detail.low,
-        target_temp_high: stateObj.attributes.target_temp_high,
-      });
-    } else if (e.detail.high) {
-      this.hass!.callService("climate", "set_temperature", {
-        entity_id: this._config!.entity,
-        target_temp_low: stateObj.attributes.target_temp_low,
-        target_temp_high: e.detail.high,
-      });
-    } else {
-      this.hass!.callService("climate", "set_temperature", {
-        entity_id: this._config!.entity,
-        temperature: e.detail.value,
-      });
-    }
-  }
-
-  private _renderIcon(mode: string, currentMode: string): TemplateResult {
-    if (!modeIcons[mode]) {
-      return html``;
-    }
     return html`
-      <ha-icon-button
-        class=${classMap({ "selected-icon": currentMode === mode })}
-        .mode=${mode}
-        @click=${this._handleAction}
-        tabindex="0"
-        .path=${modeIcons[mode]}
-        .label=${this.hass!.localize(`component.climate.state._.${mode}`)}
-      >
-      </ha-icon-button>
+      <ha-card>
+        <p class="title">${name}</p>
+        <ha-state-control-climate-temperature
+          prevent-interaction-on-scroll
+          .showCurrentAsPrimary=${this._config.show_current_as_primary}
+          show-secondary
+          .hass=${this.hass}
+          .stateObj=${stateObj}
+        ></ha-state-control-climate-temperature>
+        <ha-icon-button
+          class="more-info"
+          .label=${this.hass!.localize(
+            "ui.panel.lovelace.cards.show_more_info"
+          )}
+          .path=${mdiDotsVertical}
+          @click=${this._handleMoreInfo}
+          tabindex="0"
+        ></ha-icon-button>
+        <hui-card-features
+          style=${styleMap({
+            "--feature-color": color,
+          })}
+          .hass=${this.hass}
+          .stateObj=${stateObj}
+          .features=${this._config.features}
+        ></hui-card-features>
+      </ha-card>
     `;
-  }
-
-  private _handleMoreInfo() {
-    fireEvent(this, "hass-more-info", {
-      entityId: this._config!.entity,
-    });
-  }
-
-  private _handleAction(e: MouseEvent): void {
-    this.hass!.callService("climate", "set_hvac_mode", {
-      entity_id: this._config!.entity,
-      hvac_mode: (e.currentTarget as any).mode,
-    });
   }
 
   static get styles(): CSSResultGroup {
     return css`
-      :host {
-        display: block;
-      }
-
       ha-card {
         height: 100%;
         position: relative;
         overflow: hidden;
-        --name-font-size: 1.2rem;
-        --brightness-font-size: 1.2rem;
-        --rail-border-color: transparent;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
       }
-      .auto,
-      .heat_cool {
-        --mode-color: var(--state-climate-auto-color);
+
+      .title {
+        width: 100%;
+        font-size: 18px;
+        line-height: 36px;
+        padding: 8px 30px 8px 30px;
+        margin: 0;
+        text-align: center;
+        box-sizing: border-box;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
-      .cool {
-        --mode-color: var(--state-climate-cool-color);
-      }
-      .heat {
-        --mode-color: var(--state-climate-heat-color);
-      }
-      .manual {
-        --mode-color: var(--state-climate-manual-color);
-      }
-      .off {
-        --mode-color: var(--state-climate-off-color);
-      }
-      .fan_only {
-        --mode-color: var(--state-climate-fan_only-color);
-      }
-      .eco {
-        --mode-color: var(--state-climate-eco-color);
-      }
-      .dry {
-        --mode-color: var(--state-climate-dry-color);
-      }
-      .idle {
-        --mode-color: var(--state-climate-idle-color);
-      }
-      .unknown-mode {
-        --mode-color: var(--state-unknown-color);
+
+      ha-state-control-climate-temperature {
+        width: 100%;
+        max-width: 344px; /* 12px + 12px + 320px */
+        padding: 0 12px 12px 12px;
+        box-sizing: border-box;
       }
 
       .more-info {
@@ -501,93 +188,11 @@ export class HuiThermostatCard extends LitElement implements LovelaceCard {
         inset-inline-start: initial;
         border-radius: 100%;
         color: var(--secondary-text-color);
-        z-index: 1;
         direction: var(--direction);
       }
 
-      .content {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-      }
-
-      #controls {
-        display: flex;
-        justify-content: center;
-        padding: 16px;
-        position: relative;
-      }
-
-      #slider {
-        height: 100%;
+      hui-card-features {
         width: 100%;
-        position: relative;
-        max-width: 250px;
-        min-width: 100px;
-      }
-
-      round-slider {
-        --round-slider-path-color: var(--slider-track-color);
-        --round-slider-bar-color: var(--mode-color);
-        padding-bottom: 10%;
-      }
-
-      #slider-center {
-        position: absolute;
-        width: calc(100% - 40px);
-        height: calc(100% - 40px);
-        box-sizing: border-box;
-        border-radius: 100%;
-        left: 20px;
-        top: 20px;
-        text-align: center;
-        overflow-wrap: break-word;
-        pointer-events: none;
-      }
-
-      #temperature {
-        position: absolute;
-        transform: translate(-50%, -50%);
-        width: 100%;
-        height: 50%;
-        top: 45%;
-        left: 50%;
-        direction: ltr;
-      }
-
-      #set-values {
-        max-width: 80%;
-        transform: translate(0, -50%);
-        font-size: 20px;
-      }
-
-      #set-mode {
-        fill: var(--secondary-text-color);
-        font-size: 16px;
-      }
-
-      #info {
-        display: flex-vertical;
-        justify-content: center;
-        text-align: center;
-        padding: 16px;
-        margin-top: -60px;
-        font-size: var(--name-font-size);
-      }
-
-      #modes > * {
-        color: var(--disabled-text-color);
-        cursor: pointer;
-        display: inline-block;
-      }
-
-      #modes .selected-icon {
-        color: var(--mode-color);
-      }
-
-      text {
-        fill: var(--primary-text-color);
       }
     `;
   }

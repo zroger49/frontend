@@ -1,16 +1,18 @@
 import { fireEvent } from "../../../common/dom/fire_event";
+import { LovelaceViewElement } from "../../../data/lovelace";
+import { LovelaceBadgeConfig } from "../../../data/lovelace/config/badge";
+import { LovelaceCardConfig } from "../../../data/lovelace/config/card";
+import { LovelaceViewConfig } from "../../../data/lovelace/config/view";
 import {
-  LovelaceBadgeConfig,
-  LovelaceCardConfig,
-  LovelaceViewConfig,
-  LovelaceViewElement,
-} from "../../../data/lovelace";
-import { CUSTOM_TYPE_PREFIX } from "../../../data/lovelace_custom_cards";
+  isCustomType,
+  stripCustomPrefix,
+} from "../../../data/lovelace_custom_cards";
 import type { HuiErrorCard } from "../cards/hui-error-card";
 import type { ErrorCardConfig } from "../cards/types";
 import { LovelaceElement, LovelaceElementConfig } from "../elements/types";
 import { LovelaceRow, LovelaceRowConfig } from "../entity-rows/types";
 import { LovelaceHeaderFooterConfig } from "../header-footer/types";
+import { LovelaceCardFeatureConfig } from "../card-features/types";
 import {
   LovelaceBadge,
   LovelaceCard,
@@ -18,6 +20,8 @@ import {
   LovelaceHeaderFooter,
   LovelaceHeaderFooterConstructor,
   LovelaceRowConstructor,
+  LovelaceCardFeature,
+  LovelaceCardFeatureConstructor,
 } from "../types";
 
 const TIMEOUT = 2000;
@@ -52,6 +56,11 @@ interface CreateElementConfigTypes {
     config: LovelaceViewConfig;
     element: LovelaceViewElement;
     constructor: unknown;
+  };
+  "card-feature": {
+    config: LovelaceCardFeatureConfig;
+    element: LovelaceCardFeature;
+    constructor: LovelaceCardFeatureConstructor;
   };
 }
 
@@ -145,9 +154,7 @@ const _lazyCreate = <T extends keyof CreateElementConfigTypes>(
 };
 
 const _getCustomTag = (type: string) =>
-  type.startsWith(CUSTOM_TYPE_PREFIX)
-    ? type.substr(CUSTOM_TYPE_PREFIX.length)
-    : undefined;
+  isCustomType(type) ? stripCustomPrefix(type) : undefined;
 
 export const createLovelaceElement = <T extends keyof CreateElementConfigTypes>(
   tagSuffix: T,
@@ -176,7 +183,7 @@ export const createLovelaceElement = <T extends keyof CreateElementConfigTypes>(
 };
 
 export const tryCreateLovelaceElement = <
-  T extends keyof CreateElementConfigTypes
+  T extends keyof CreateElementConfigTypes,
 >(
   tagSuffix: T,
   config: CreateElementConfigTypes[T]["config"],
@@ -237,7 +244,7 @@ export const tryCreateLovelaceElement = <
 };
 
 export const getLovelaceElementClass = async <
-  T extends keyof CreateElementConfigTypes
+  T extends keyof CreateElementConfigTypes,
 >(
   type: string,
   tagSuffix: T,

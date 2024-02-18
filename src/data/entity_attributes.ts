@@ -1,17 +1,8 @@
-import { html, TemplateResult } from "lit";
-import { until } from "lit/directives/until";
-import checkValidDate from "../common/datetime/check_valid_date";
-import { formatDate } from "../common/datetime/format_date";
-import { formatDateTimeWithSeconds } from "../common/datetime/format_date_time";
-import { formatNumber } from "../common/number/format_number";
-import { capitalizeFirstLetter } from "../common/string/capitalize-first-letter";
-import { isDate } from "../common/string/is_date";
-import { isTimestamp } from "../common/string/is_timestamp";
-import { HomeAssistant } from "../types";
-
-let jsYamlPromise: Promise<typeof import("../resources/js-yaml-dump")>;
+import { formatDuration } from "../common/datetime/duration";
+import { FrontendLocaleData } from "./translation";
 
 export const STATE_ATTRIBUTES = [
+  "entity_id",
   "assumed_state",
   "attribution",
   "custom_ui_more_info",
@@ -21,6 +12,7 @@ export const STATE_ATTRIBUTES = [
   "emulated_hue_name",
   "emulated_hue",
   "entity_picture",
+  "event_types",
   "friendly_name",
   "haaska_hidden",
   "haaska_name",
@@ -33,73 +25,78 @@ export const STATE_ATTRIBUTES = [
   "unit_of_measurement",
 ];
 
-// Convert from internal snake_case format to user-friendly format
-export function formatAttributeName(value: string): string {
-  value = value
-    .replace(/_/g, " ")
-    .replace(/\bid\b/g, "ID")
-    .replace(/\bip\b/g, "IP")
-    .replace(/\bmac\b/g, "MAC")
-    .replace(/\bgps\b/g, "GPS");
-  return capitalizeFirstLetter(value);
-}
+export const TEMPERATURE_ATTRIBUTES = new Set([
+  "temperature",
+  "current_temperature",
+  "target_temperature",
+  "target_temp_temp",
+  "target_temp_high",
+  "target_temp_low",
+  "target_temp_step",
+  "min_temp",
+  "max_temp",
+]);
 
-export function formatAttributeValue(
-  hass: HomeAssistant,
-  value: any
-): string | TemplateResult {
-  if (value === null) {
-    return "—";
-  }
+export const DOMAIN_ATTRIBUTES_UNITS = {
+  climate: {
+    humidity: "%",
+    current_humidity: "%",
+    target_humidity_low: "%",
+    target_humidity_high: "%",
+    target_humidity_step: "%",
+    min_humidity: "%",
+    max_humidity: "%",
+  },
+  cover: {
+    current_position: "%",
+    current_tilt_position: "%",
+  },
+  fan: {
+    percentage: "%",
+  },
+  humidifier: {
+    humidity: "%",
+    current_humidity: "%",
+    min_humidity: "%",
+    max_humidity: "%",
+  },
+  light: {
+    color_temp: "mired",
+    max_mireds: "mired",
+    min_mireds: "mired",
+    color_temp_kelvin: "K",
+    min_color_temp_kelvin: "K",
+    max_color_temp_kelvin: "K",
+    brightness: "%",
+  },
+  sun: {
+    elevation: "°",
+  },
+  vacuum: {
+    battery_level: "%",
+  },
+  valve: {
+    current_position: "%",
+  },
+  sensor: {
+    battery_level: "%",
+  },
+  media_player: {
+    volume_level: "%",
+  },
+} as const satisfies Record<string, Record<string, string>>;
 
-  // YAML handling
-  if (
-    (Array.isArray(value) && value.some((val) => val instanceof Object)) ||
-    (!Array.isArray(value) && value instanceof Object)
-  ) {
-    if (!jsYamlPromise) {
-      jsYamlPromise = import("../resources/js-yaml-dump");
-    }
-    const yaml = jsYamlPromise.then((jsYaml) => jsYaml.dump(value));
-    return html`<pre>${until(yaml, "")}</pre>`;
-  }
+type Formatter = (value: number, locale: FrontendLocaleData) => string;
 
-  if (typeof value === "number") {
-    return formatNumber(value, hass.locale);
-  }
-
-  if (typeof value === "string") {
-    // URL handling
-    if (value.startsWith("http")) {
-      try {
-        // If invalid URL, exception will be raised
-        const url = new URL(value);
-        if (url.protocol === "http:" || url.protocol === "https:")
-          return html`<a target="_blank" rel="noreferrer" href=${value}
-            >${value}</a
-          >`;
-      } catch (_) {
-        // Nothing to do here
-      }
-    }
-
-    // Date handling
-    if (isDate(value, true)) {
-      // Timestamp handling
-      if (isTimestamp(value)) {
-        const date = new Date(value);
-        if (checkValidDate(date)) {
-          return formatDateTimeWithSeconds(date, hass.locale);
-        }
-      }
-
-      // Value was not a timestamp, so only do date formatting
-      const date = new Date(value);
-      if (checkValidDate(date)) {
-        return formatDate(date, hass.locale);
-      }
-    }
-  }
-
-  return Array.isArray(value) ? value.join(", ") : value;
-}
+export const DOMAIN_ATTRIBUTES_FORMATERS: Record<
+  string,
+  Record<string, Formatter>
+> = {
+  light: {
+    brightness: (value) => Math.round((value / 255) * 100).toString(),
+  },
+  media_player: {
+    volume_level: (value) => Math.round(value * 100).toString(),
+    media_duration: (value) => formatDuration(value.toString(), "s"),
+  },
+};

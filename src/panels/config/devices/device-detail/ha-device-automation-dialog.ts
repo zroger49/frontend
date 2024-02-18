@@ -1,5 +1,5 @@
 import "@material/mwc-button/mwc-button";
-import { CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../../common/dom/fire_event";
 import "../../../../components/ha-dialog";
@@ -77,9 +77,9 @@ export class DialogDeviceAutomation extends LitElement {
     });
   }
 
-  protected render(): TemplateResult | void {
+  protected render() {
     if (!this._params) {
-      return html``;
+      return nothing;
     }
 
     return html`
@@ -109,6 +109,7 @@ export class DialogDeviceAutomation extends LitElement {
                       <ha-device-triggers-card
                         .hass=${this.hass}
                         .automations=${this._triggers}
+                        .entityReg=${this._params.entityReg}
                       ></ha-device-triggers-card>
                     `
                   : ""}
@@ -117,6 +118,7 @@ export class DialogDeviceAutomation extends LitElement {
                       <ha-device-conditions-card
                         .hass=${this.hass}
                         .automations=${this._conditions}
+                        .entityReg=${this._params.entityReg}
                       ></ha-device-conditions-card>
                     `
                   : ""}
@@ -126,6 +128,7 @@ export class DialogDeviceAutomation extends LitElement {
                         .hass=${this.hass}
                         .automations=${this._actions}
                         .script=${this._params.script}
+                        .entityReg=${this._params.entityReg}
                       ></ha-device-actions-card>
                     `
                   : ""}

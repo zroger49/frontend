@@ -1,6 +1,6 @@
 import "@material/mwc-button";
 import type { HassEntity } from "home-assistant-js-websocket";
-import { css, html, LitElement, TemplateResult } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import "../../../components/ha-alert";
 import "../../../components/ha-circular-progress";
@@ -18,9 +18,9 @@ export class MoreInfoConfigurator extends LitElement {
 
   private _fieldInput = {};
 
-  protected render(): TemplateResult {
+  protected render() {
     if (this.stateObj?.state !== "configure") {
-      return html``;
+      return nothing;
     }
 
     return html`
@@ -36,12 +36,13 @@ export class MoreInfoConfigurator extends LitElement {
             </ha-alert>`
           : ""}
         ${this.stateObj.attributes.fields.map(
-          (field) => html`<ha-textfield
-            .label=${field.name}
-            .name=${field.id}
-            .type=${field.type}
-            @change=${this._fieldChanged}
-          ></ha-textfield>`
+          (field) =>
+            html`<ha-textfield
+              .label=${field.name}
+              .name=${field.id}
+              .type=${field.type}
+              @change=${this._fieldChanged}
+            ></ha-textfield>`
         )}
         ${this.stateObj.attributes.submit_caption
           ? html`<p class="submit">
@@ -52,8 +53,8 @@ export class MoreInfoConfigurator extends LitElement {
               >
                 ${this._isConfiguring
                   ? html`<ha-circular-progress
-                      active
-                      alt="Configuring"
+                      indeterminate
+                      aria-label="Configuring"
                     ></ha-circular-progress>`
                   : ""}
                 ${this.stateObj.attributes.submit_caption}
@@ -117,6 +118,8 @@ export class MoreInfoConfigurator extends LitElement {
       width: 14px;
       height: 14px;
       margin-right: 20px;
+      margin-inline-end: 20px;
+      margin-inline-start: initial;
     }
   `;
 }

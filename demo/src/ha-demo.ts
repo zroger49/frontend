@@ -1,4 +1,6 @@
 // Compat needs to be first import
+import "../../src/resources/compatibility";
+import { customElement } from "lit/decorators";
 import { isNavigationClick } from "../../src/common/dom/is-navigation-click";
 import { navigate } from "../../src/common/navigate";
 import {
@@ -6,7 +8,6 @@ import {
   provideHass,
 } from "../../src/fake_data/provide_hass";
 import { HomeAssistantAppEl } from "../../src/layouts/home-assistant";
-import "../../src/resources/compatibility";
 import { HomeAssistant } from "../../src/types";
 import { selectedDemoConfig } from "./configs/demo-configs";
 import { mockAuth } from "./stubs/auth";
@@ -16,17 +17,20 @@ import { energyEntities } from "./stubs/entities";
 import { mockEntityRegistry } from "./stubs/entity_registry";
 import { mockEvents } from "./stubs/events";
 import { mockFrontend } from "./stubs/frontend";
+import { mockIcons } from "./stubs/icons";
 import { mockHistory } from "./stubs/history";
 import { mockLovelace } from "./stubs/lovelace";
 import { mockMediaPlayer } from "./stubs/media_player";
 import { mockPersistentNotification } from "./stubs/persistent_notification";
 import { mockRecorder } from "./stubs/recorder";
-import { mockShoppingList } from "./stubs/shopping_list";
+import { mockTodo } from "./stubs/todo";
+import { mockSensor } from "./stubs/sensor";
 import { mockSystemLog } from "./stubs/system_log";
 import { mockTemplate } from "./stubs/template";
 import { mockTranslations } from "./stubs/translations";
 
-class HaDemo extends HomeAssistantAppEl {
+@customElement("ha-demo")
+export class HaDemo extends HomeAssistantAppEl {
   protected async _initializeHass() {
     const initial: Partial<MockHomeAssistant> = {
       panelUrl: (this as any)._panelUrl,
@@ -47,12 +51,14 @@ class HaDemo extends HomeAssistantAppEl {
     mockTranslations(hass);
     mockHistory(hass);
     mockRecorder(hass);
-    mockShoppingList(hass);
+    mockTodo(hass);
+    mockSensor(hass);
     mockSystemLog(hass);
     mockTemplate(hass);
     mockEvents(hass);
     mockMediaPlayer(hass);
     mockFrontend(hass);
+    mockIcons(hass);
     mockEnergy(hass);
     mockPersistentNotification(hass);
     mockConfigEntries(hass);
@@ -71,6 +77,7 @@ class HaDemo extends HomeAssistantAppEl {
         entity_category: null,
         has_entity_name: false,
         unique_id: "co2_intensity",
+        options: null,
       },
       {
         config_entry_id: "co2signal",
@@ -86,6 +93,7 @@ class HaDemo extends HomeAssistantAppEl {
         entity_category: null,
         has_entity_name: false,
         unique_id: "grid_fossil_fuel_percentage",
+        options: null,
       },
     ]);
 
@@ -120,8 +128,6 @@ class HaDemo extends HomeAssistantAppEl {
     (this as any).hassConnected();
   }
 }
-
-customElements.define("ha-demo", HaDemo);
 
 declare global {
   interface HTMLElementTagNameMap {

@@ -1,8 +1,8 @@
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
-import { customElement, property } from "lit/decorators";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
+import { customElement, property, state } from "lit/decorators";
 import { ifDefined } from "lit/directives/if-defined";
 import "../../../components/entity/ha-state-label-badge";
-import { ActionHandlerEvent } from "../../../data/lovelace";
+import { ActionHandlerEvent } from "../../../data/lovelace/action_handler";
 import { HomeAssistant } from "../../../types";
 import { actionHandler } from "../common/directives/action-handler-directive";
 import { handleAction } from "../common/handle-action";
@@ -14,15 +14,15 @@ import { StateLabelBadgeConfig } from "./types";
 export class HuiStateLabelBadge extends LitElement implements LovelaceBadge {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
-  @property() protected _config?: StateLabelBadgeConfig;
+  @state() protected _config?: StateLabelBadgeConfig;
 
   public setConfig(config: StateLabelBadgeConfig): void {
     this._config = config;
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._config || !this.hass) {
-      return html``;
+      return nothing;
     }
 
     const stateObj = this.hass.states[this._config.entity!];
@@ -34,6 +34,7 @@ export class HuiStateLabelBadge extends LitElement implements LovelaceBadge {
         .name=${this._config.name}
         .icon=${this._config.icon}
         .image=${this._config.image}
+        .showName=${this._config.show_name ?? true}
         @action=${this._handleAction}
         .actionHandler=${actionHandler({
           hasHold: hasAction(this._config!.hold_action),

@@ -1,11 +1,11 @@
 import "@material/mwc-list/mwc-list-item";
 import {
-  css,
   CSSResultGroup,
-  html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  css,
+  html,
+  nothing,
 } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { stopPropagation } from "../../../common/dom/stop_propagation";
@@ -40,9 +40,9 @@ class HuiSelectEntityRow extends LitElement implements LovelaceRow {
     return hasConfigOrEntityChanged(this, changedProps);
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.hass || !this._config) {
-      return html``;
+      return nothing;
     }
 
     const stateObj = this.hass.states[this._config.entity] as
@@ -74,19 +74,11 @@ class HuiSelectEntityRow extends LitElement implements LovelaceRow {
         >
           ${stateObj.attributes.options
             ? stateObj.attributes.options.map(
-                (option) =>
-                  html`
-                    <mwc-list-item .value=${option}
-                      >${(stateObj.attributes.device_class &&
-                        this.hass!.localize(
-                          `component.select.state.${stateObj.attributes.device_class}.${option}`
-                        )) ||
-                      this.hass!.localize(
-                        `component.select.state._.${option}`
-                      ) ||
-                      option}
-                    </mwc-list-item>
-                  `
+                (option) => html`
+                  <mwc-list-item .value=${option}>
+                    ${this.hass!.formatEntityState(stateObj, option)}
+                  </mwc-list-item>
+                `
               )
             : ""}
         </ha-select>
@@ -102,6 +94,7 @@ class HuiSelectEntityRow extends LitElement implements LovelaceRow {
       }
       ha-select {
         width: 100%;
+        --ha-select-min-width: 0;
       }
     `;
   }

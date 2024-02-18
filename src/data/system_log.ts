@@ -1,20 +1,31 @@
 import { HomeAssistant } from "../types";
 
+export type SystemLogLevel =
+  | "critical"
+  | "error"
+  | "warning"
+  | "info"
+  | "debug";
+
 export interface LoggedError {
   name: string;
   message: [string];
-  level: string;
+  level: SystemLogLevel;
   source: [string, number];
-  // unix timestamp in seconds
-  timestamp: number;
   exception: string;
   count: number;
-  // unix timestamp in seconds
+  // unix timestamps in seconds
+  timestamp: number;
   first_occurred: number;
 }
 
-export const fetchSystemLog = (hass: HomeAssistant) =>
-  hass.callWS<LoggedError[]>({ type: "system_log/list" });
+export const fetchSystemLog = async (hass: HomeAssistant) => {
+  const log = await hass.callWS<LoggedError[]>({ type: "system_log/list" });
+  for (const error of log) {
+    error.level = error.level.toLowerCase() as LoggedError["level"];
+  }
+  return log;
+};
 
 export const getLoggedErrorIntegration = (item: LoggedError) => {
   // Try to derive from logger name

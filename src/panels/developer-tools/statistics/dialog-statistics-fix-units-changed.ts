@@ -1,16 +1,16 @@
 import "@material/mwc-button/mwc-button";
-import { LitElement, TemplateResult, html, CSSResultGroup } from "lit";
+import { CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
-import "../../../components/ha-dialog";
 import { fireEvent } from "../../../common/dom/fire_event";
-import { haStyle, haStyleDialog } from "../../../resources/styles";
-import { HomeAssistant } from "../../../types";
+import "../../../components/ha-dialog";
+import "../../../components/ha-formfield";
+import "../../../components/ha-radio";
 import {
   clearStatistics,
   updateStatisticsMetadata,
 } from "../../../data/recorder";
-import "../../../components/ha-formfield";
-import "../../../components/ha-radio";
+import { haStyle, haStyleDialog } from "../../../resources/styles";
+import { HomeAssistant } from "../../../types";
 import type { DialogStatisticsUnitsChangedParams } from "./show-dialog-statistics-fix-units-changed";
 
 @customElement("dialog-statistics-fix-units-changed")
@@ -32,11 +32,11 @@ export class DialogStatisticsFixUnitsChanged extends LitElement {
     fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
-  protected render(): TemplateResult | void {
+  protected render() {
     if (!this._params) {
-      return html``;
+      return nothing;
     }
-    /* eslint-disable lit/quoted-expressions */
+
     return html`
       <ha-dialog
         open
@@ -46,17 +46,26 @@ export class DialogStatisticsFixUnitsChanged extends LitElement {
         )}
       >
         <p>
-          The unit of this entity changed to
-          '${this._params.issue.data.state_unit}' which can't be converted to
-          the previously stored unit,
-          '${this._params.issue.data.metadata_unit}'.
-          <br />If the historic statistic values have a wrong unit, you can
-          update the units of the old values. The values will not be updated.<br />Otherwise
-          you can choose to delete all historic statistic values, and start
-          over.
+          ${this.hass.localize(
+            "ui.panel.developer-tools.tabs.statistics.fix_issue.units_changed.info_text_1",
+            {
+              current_unit: this._params.issue.data.state_unit,
+              previous_unit: this._params.issue.data.metadata_unit,
+            }
+          )}<br />
+          ${this.hass.localize(
+            "ui.panel.developer-tools.tabs.statistics.fix_issue.units_changed.info_text_2"
+          )}<br />
+          ${this.hass.localize(
+            "ui.panel.developer-tools.tabs.statistics.fix_issue.units_changed.info_text_3"
+          )}
         </p>
 
-        <h3>How do you want to fix this issue?</h3>
+        <h3>
+          ${this.hass.localize(
+            "ui.panel.developer-tools.tabs.statistics.fix_issue.units_changed.how_to_fix"
+          )}
+        </h3>
         <ha-formfield
           .label=${this.hass.localize(
             "ui.panel.developer-tools.tabs.statistics.fix_issue.units_changed.update",
@@ -94,7 +103,6 @@ export class DialogStatisticsFixUnitsChanged extends LitElement {
         </mwc-button>
       </ha-dialog>
     `;
-    /* eslint-enable lit/quoted-expressions */
   }
 
   private _handleActionChanged(ev): void {

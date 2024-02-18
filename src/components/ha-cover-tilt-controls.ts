@@ -1,15 +1,15 @@
 import { mdiArrowBottomLeft, mdiArrowTopRight, mdiStop } from "@mdi/js";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
 import { supportsFeature } from "../common/entity/supports-feature";
 import {
+  canCloseTilt,
+  canOpenTilt,
+  canStopTilt,
   CoverEntity,
   CoverEntityFeature,
-  isFullyClosedTilt,
-  isFullyOpenTilt,
 } from "../data/cover";
-import { UNAVAILABLE } from "../data/entity";
 import { HomeAssistant } from "../types";
 import "./ha-icon-button";
 
@@ -19,9 +19,9 @@ class HaCoverTiltControls extends LitElement {
 
   @property({ attribute: false }) stateObj!: CoverEntity;
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.stateObj) {
-      return html``;
+      return nothing;
     }
 
     return html` <ha-icon-button
@@ -31,12 +31,10 @@ class HaCoverTiltControls extends LitElement {
             CoverEntityFeature.OPEN_TILT
           ),
         })}
-        .label=${this.hass.localize(
-          "ui.dialogs.more_info_control.cover.open_tilt_cover"
-        )}
+        .label=${this.hass.localize("ui.card.cover.open_tilt_cover")}
         .path=${mdiArrowTopRight}
         @click=${this._onOpenTiltTap}
-        .disabled=${this._computeOpenDisabled()}
+        .disabled=${!canOpenTilt(this.stateObj)}
       ></ha-icon-button>
       <ha-icon-button
         class=${classMap({
@@ -45,12 +43,10 @@ class HaCoverTiltControls extends LitElement {
             CoverEntityFeature.STOP_TILT
           ),
         })}
-        .label=${this.hass.localize(
-          "ui.dialogs.more_info_control.cover.stop_cover"
-        )}
+        .label=${this.hass.localize("ui.card.cover.stop_cover")}
         .path=${mdiStop}
         @click=${this._onStopTiltTap}
-        .disabled=${this.stateObj.state === UNAVAILABLE}
+        .disabled=${!canStopTilt(this.stateObj)}
       ></ha-icon-button>
       <ha-icon-button
         class=${classMap({
@@ -59,29 +55,11 @@ class HaCoverTiltControls extends LitElement {
             CoverEntityFeature.CLOSE_TILT
           ),
         })}
-        .label=${this.hass.localize(
-          "ui.dialogs.more_info_control.cover.close_tilt_cover"
-        )}
+        .label=${this.hass.localize("ui.card.cover.close_tilt_cover")}
         .path=${mdiArrowBottomLeft}
         @click=${this._onCloseTiltTap}
-        .disabled=${this._computeClosedDisabled()}
+        .disabled=${!canCloseTilt(this.stateObj)}
       ></ha-icon-button>`;
-  }
-
-  private _computeOpenDisabled(): boolean {
-    if (this.stateObj.state === UNAVAILABLE) {
-      return true;
-    }
-    const assumedState = this.stateObj.attributes.assumed_state === true;
-    return isFullyOpenTilt(this.stateObj) && !assumedState;
-  }
-
-  private _computeClosedDisabled(): boolean {
-    if (this.stateObj.state === UNAVAILABLE) {
-      return true;
-    }
-    const assumedState = this.stateObj.attributes.assumed_state === true;
-    return isFullyClosedTilt(this.stateObj) && !assumedState;
   }
 
   private _onOpenTiltTap(ev): void {

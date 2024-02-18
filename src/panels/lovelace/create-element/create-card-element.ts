@@ -1,4 +1,4 @@
-import { LovelaceCardConfig } from "../../../data/lovelace";
+import { LovelaceCardConfig } from "../../../data/lovelace/config/card";
 import "../cards/hui-button-card";
 import "../cards/hui-calendar-card";
 import "../cards/hui-entities-card";
@@ -9,8 +9,8 @@ import "../cards/hui-grid-card";
 import "../cards/hui-light-card";
 import "../cards/hui-sensor-card";
 import "../cards/hui-thermostat-card";
-import "../cards/hui-weather-forecast-card";
 import "../cards/hui-tile-card";
+import "../cards/hui-weather-forecast-card";
 import {
   createLovelaceElement,
   getLovelaceElementClass,
@@ -47,10 +47,14 @@ const LAZY_LOAD_TYPES = {
   "energy-distribution": () =>
     import("../cards/energy/hui-energy-distribution-card"),
   "energy-gas-graph": () => import("../cards/energy/hui-energy-gas-graph-card"),
+  "energy-water-graph": () =>
+    import("../cards/energy/hui-energy-water-graph-card"),
   "energy-grid-neutrality-gauge": () =>
     import("../cards/energy/hui-energy-grid-neutrality-gauge-card"),
   "energy-solar-consumed-gauge": () =>
     import("../cards/energy/hui-energy-solar-consumed-gauge-card"),
+  "energy-self-sufficiency-gauge": () =>
+    import("../cards/energy/hui-energy-self-sufficiency-gauge-card"),
   "energy-solar-graph": () =>
     import("../cards/energy/hui-energy-solar-graph-card"),
   "energy-sources-table": () =>
@@ -73,10 +77,12 @@ const LAZY_LOAD_TYPES = {
   "picture-glance": () => import("../cards/hui-picture-glance-card"),
   picture: () => import("../cards/hui-picture-card"),
   "plant-status": () => import("../cards/hui-plant-status-card"),
-  "safe-mode": () => import("../cards/hui-safe-mode-card"),
+  "recovery-mode": () => import("../cards/hui-recovery-mode-card"),
+  "todo-list": () => import("../cards/hui-todo-list-card"),
   "shopping-list": () => import("../cards/hui-shopping-list-card"),
   starting: () => import("../cards/hui-starting-card"),
   "statistics-graph": () => import("../cards/hui-statistics-graph-card"),
+  statistic: () => import("../cards/hui-statistic-card"),
   "vertical-stack": () => import("../cards/hui-vertical-stack-card"),
 };
 

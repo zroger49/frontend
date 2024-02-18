@@ -266,6 +266,9 @@ export class HaBaseTimeInput extends LitElement {
       seconds: this.seconds,
       milliseconds: this.milliseconds,
     };
+    if (this.enableDay) {
+      value.days = this.days;
+    }
     if (this.format === 12) {
       value.amPm = this.amPm;
     }
@@ -350,6 +353,8 @@ export class HaBaseTimeInput extends LitElement {
       text-transform: var(--mdc-typography-body2-text-transform, inherit);
       color: var(--mdc-theme-text-primary-on-background, rgba(0, 0, 0, 0.87));
       padding-left: 4px;
+      padding-inline-start: 4px;
+      padding-inline-end: initial;
     }
   `;
 }

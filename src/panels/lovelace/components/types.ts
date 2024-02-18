@@ -1,4 +1,4 @@
-import { LovelaceCardConfig } from "../../../data/lovelace";
+import { LovelaceCardConfig } from "../../../data/lovelace/config/card";
 import { Condition } from "../common/validate-condition";
 import { LovelaceElementConfig } from "../elements/types";
 
@@ -16,4 +16,4 @@ export const TIMESTAMP_RENDERING_FORMATS = [
 ] as const;
 
 export type TimestampRenderingFormat =
-  typeof TIMESTAMP_RENDERING_FORMATS[number];
+  (typeof TIMESTAMP_RENDERING_FORMATS)[number];

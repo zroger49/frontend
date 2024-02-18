@@ -1,81 +1,21 @@
 import type { ChartData, ChartDataset, ChartOptions } from "chart.js";
-import { HassEntity } from "home-assistant-js-websocket";
+import { getRelativePosition } from "chart.js/helpers";
 import { css, CSSResultGroup, html, LitElement, PropertyValues } from "lit";
-import { customElement, property, state } from "lit/decorators";
-import { getGraphColorByIndex } from "../../common/color/colors";
+import { customElement, property, query, state } from "lit/decorators";
 import { formatDateTimeWithSeconds } from "../../common/datetime/format_date_time";
-import { computeDomain } from "../../common/entity/compute_domain";
+import millisecondsToDuration from "../../common/datetime/milliseconds_to_duration";
+import { fireEvent } from "../../common/dom/fire_event";
 import { numberFormatToLocale } from "../../common/number/format_number";
 import { computeRTL } from "../../common/util/compute_rtl";
 import { TimelineEntity } from "../../data/history";
 import { HomeAssistant } from "../../types";
-import { MIN_TIME_BETWEEN_UPDATES } from "./ha-chart-base";
+import {
+  ChartResizeOptions,
+  HaChartBase,
+  MIN_TIME_BETWEEN_UPDATES,
+} from "./ha-chart-base";
 import type { TimeLineData } from "./timeline-chart/const";
-
-/** Binary sensor device classes for which the static colors for on/off are NOT inverted.
- *  List the ones were "on" = good or normal state => should be rendered "green".
- *  Note: It is now a "not inverted" list (compared to the past) since we now have more inverted ones.
- */
-const BINARY_SENSOR_DEVICE_CLASS_COLOR_NOT_INVERTED = new Set([
-  "battery_charging",
-  "connectivity",
-  "light",
-  "moving",
-  "plug",
-  "power",
-  "presence",
-  "running",
-]);
-
-const STATIC_STATE_COLORS = new Set([
-  "on",
-  "off",
-  "home",
-  "not_home",
-  "unavailable",
-  "unknown",
-  "idle",
-]);
-
-const stateColorMap: Map<string, string> = new Map();
-
-let colorIndex = 0;
-
-const invertOnOff = (entityState?: HassEntity) =>
-  entityState &&
-  computeDomain(entityState.entity_id) === "binary_sensor" &&
-  "device_class" in entityState.attributes &&
-  !BINARY_SENSOR_DEVICE_CLASS_COLOR_NOT_INVERTED.has(
-    entityState.attributes.device_class!
-  );
-
-const getColor = (
-  stateString: string,
-  entityState: HassEntity,
-  computedStyles: CSSStyleDeclaration
-) => {
-  // Inversion is only valid for "on" or "off" state
-  if (
-    (stateString === "on" || stateString === "off") &&
-    invertOnOff(entityState)
-  ) {
-    stateString = stateString === "on" ? "off" : "on";
-  }
-  if (stateColorMap.has(stateString)) {
-    return stateColorMap.get(stateString);
-  }
-  if (STATIC_STATE_COLORS.has(stateString)) {
-    const color = computedStyles.getPropertyValue(
-      `--state-${stateString}-color`
-    );
-    stateColorMap.set(stateString, color);
-    return color;
-  }
-  const color = getGraphColorByIndex(colorIndex, computedStyles);
-  colorIndex++;
-  stateColorMap.set(stateString, color);
-  return color;
-};
+import { computeTimelineColor } from "./timeline-chart/timeline-color";
 
 @customElement("state-history-chart-timeline")
 export class StateHistoryChartTimeline extends LitElement {
@@ -83,15 +23,17 @@ export class StateHistoryChartTimeline extends LitElement {
 
   @property({ attribute: false }) public data: TimelineEntity[] = [];
 
-  @property() public narrow!: boolean;
+  @property({ type: Boolean }) public narrow = false;
 
-  @property() public names: boolean | Record<string, string> = false;
+  @property({ attribute: false }) public names?: Record<string, string>;
 
   @property() public unit?: string;
 
   @property() public identifier?: string;
 
-  @property({ type: Boolean }) public isSingleDevice = false;
+  @property({ type: Boolean }) public showNames = true;
+
+  @property({ type: Boolean }) public clickForMoreInfo = true;
 
   @property({ type: Boolean }) public chunked = false;
 
@@ -99,18 +41,32 @@ export class StateHistoryChartTimeline extends LitElement {
 
   @property({ attribute: false }) public endTime!: Date;
 
+  @property({ type: Number }) public paddingYAxis = 0;
+
+  @property({ type: Number }) public chartIndex?;
+
   @state() private _chartData?: ChartData<"timeline">;
 
   @state() private _chartOptions?: ChartOptions<"timeline">;
 
+  @state() private _yWidth = 0;
+
   private _chartTime: Date = new Date();
+
+  @query("ha-chart-base") private _chart?: HaChartBase;
+
+  public resize = (options?: ChartResizeOptions): void => {
+    this._chart?.resize(options);
+  };
 
   protected render() {
     return html`
       <ha-chart-base
+        .hass=${this.hass}
         .data=${this._chartData}
         .options=${this._chartOptions}
         .height=${this.data.length * 30 + 30}
+        .paddingYAxis=${this.paddingYAxis - this._yWidth}
         chart-type="timeline"
       ></ha-chart-base>
     `;
@@ -122,6 +78,8 @@ export class StateHistoryChartTimeline extends LitElement {
     }
 
     if (
+      changedProps.has("startTime") ||
+      changedProps.has("endTime") ||
       changedProps.has("data") ||
       this._chartTime <
         new Date(this.endTime.getTime() - MIN_TIME_BETWEEN_UPDATES)
@@ -131,7 +89,11 @@ export class StateHistoryChartTimeline extends LitElement {
       this._generateData();
     }
 
-    if (changedProps.has("startTime") || changedProps.has("endTime")) {
+    if (
+      changedProps.has("startTime") ||
+      changedProps.has("endTime") ||
+      changedProps.has("showNames")
+    ) {
       this._createOptions();
     }
   }
@@ -149,6 +111,7 @@ export class StateHistoryChartTimeline extends LitElement {
           adapters: {
             date: {
               locale: this.hass.locale,
+              config: this.hass.config,
             },
           },
           suggestedMin: this.startTime,
@@ -183,8 +146,7 @@ export class StateHistoryChartTimeline extends LitElement {
             drawTicks: false,
           },
           ticks: {
-            display:
-              this.chunked || !this.isSingleDevice || this.data.length !== 1,
+            display: this.chunked || this.showNames,
           },
           afterSetDimensions: (y) => {
             y.maxWidth = y.chart.width * 0.18;
@@ -193,6 +155,23 @@ export class StateHistoryChartTimeline extends LitElement {
             if (this.chunked) {
               // ensure all the chart labels are the same width
               scaleInstance.width = narrow ? 105 : 185;
+            }
+          },
+          afterUpdate: (y) => {
+            const yWidth = this.showNames
+              ? y.width ?? 0
+              : computeRTL(this.hass)
+                ? 0
+                : y.left ?? 0;
+            if (
+              this._yWidth !== Math.floor(yWidth) &&
+              y.ticks.length === this.data.length
+            ) {
+              this._yWidth = Math.floor(yWidth);
+              fireEvent(this, "y-width-changed", {
+                value: this._yWidth,
+                chartIndex: this.chartIndex,
+              });
             }
           },
           position: computeRTL(this.hass) ? "right" : "left",
@@ -209,10 +188,24 @@ export class StateHistoryChartTimeline extends LitElement {
             beforeBody: (context) => context[0].dataset.label || "",
             label: (item) => {
               const d = item.dataset.data[item.dataIndex] as TimeLineData;
+              const durationInMs = d.end.getTime() - d.start.getTime();
+              const formattedDuration = `${this.hass.localize(
+                "ui.components.history_charts.duration"
+              )}: ${millisecondsToDuration(durationInMs)}`;
+
               return [
                 d.label || "",
-                formatDateTimeWithSeconds(d.start, this.hass.locale),
-                formatDateTimeWithSeconds(d.end, this.hass.locale),
+                formatDateTimeWithSeconds(
+                  d.start,
+                  this.hass.locale,
+                  this.hass.config
+                ),
+                formatDateTimeWithSeconds(
+                  d.end,
+                  this.hass.locale,
+                  this.hass.config
+                ),
+                formattedDuration,
               ];
             },
             labelColor: (item) => ({
@@ -230,6 +223,27 @@ export class StateHistoryChartTimeline extends LitElement {
       },
       // @ts-expect-error
       locale: numberFormatToLocale(this.hass.locale),
+      onClick: (e: any) => {
+        if (
+          !this.clickForMoreInfo ||
+          !(e.native instanceof MouseEvent) ||
+          (e.native instanceof PointerEvent && e.native.pointerType !== "mouse")
+        ) {
+          return;
+        }
+
+        const chart = e.chart;
+        const canvasPosition = getRelativePosition(e, chart);
+
+        const index = Math.abs(
+          chart.scales.y.getValueForPixel(canvasPosition.y)
+        );
+        fireEvent(this, "hass-more-info", {
+          // @ts-ignore
+          entityId: this._chartData?.datasets[index]?.label,
+        });
+        chart.canvas.dispatchEvent(new Event("mouseout")); // to hide tooltip
+      },
     };
   }
 
@@ -279,10 +293,10 @@ export class StateHistoryChartTimeline extends LitElement {
             start: prevLastChanged,
             end: newLastChanged,
             label: locState,
-            color: getColor(
+            color: computeTimelineColor(
               prevState,
-              this.hass.states[stateInfo.entity_id],
-              computedStyles
+              computedStyles,
+              this.hass.states[stateInfo.entity_id]
             ),
           });
 
@@ -297,10 +311,10 @@ export class StateHistoryChartTimeline extends LitElement {
           start: prevLastChanged,
           end: endTime,
           label: locState,
-          color: getColor(
+          color: computeTimelineColor(
             prevState,
-            this.hass.states[stateInfo.entity_id],
-            computedStyles
+            computedStyles,
+            this.hass.states[stateInfo.entity_id]
           ),
         });
       }

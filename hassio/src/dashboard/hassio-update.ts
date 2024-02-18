@@ -1,6 +1,5 @@
 import "@material/mwc-button";
-import { mdiHomeAssistant } from "@mdi/js";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 import memoizeOne from "memoize-one";
 import "../../../src/components/buttons/ha-progress-button";
@@ -13,6 +12,7 @@ import {
   HassioSupervisorInfo,
 } from "../../../src/data/hassio/supervisor";
 import { Supervisor } from "../../../src/data/supervisor/supervisor";
+import { mdiHomeAssistant } from "../../../src/resources/home-assistant-logo-svg";
 import { haStyle } from "../../../src/resources/styles";
 import { HomeAssistant } from "../../../src/types";
 import { hassioStyle } from "../resources/hassio-style";
@@ -33,24 +33,22 @@ export class HassioUpdate extends LitElement {
       ).length
   );
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.supervisor) {
-      return html``;
+      return nothing;
     }
 
     const updatesAvailable = this._pendingUpdates(this.supervisor);
     if (!updatesAvailable) {
-      return html``;
+      return nothing;
     }
 
     return html`
       <div class="content">
         <h1>
-          ${this.supervisor.localize(
-            "common.update_available",
-            "count",
-            updatesAvailable
-          )}
+          ${this.supervisor.localize("common.update_available", {
+            count: updatesAvailable,
+          })}
           🎉
         </h1>
         <div class="card-group">
@@ -80,9 +78,9 @@ export class HassioUpdate extends LitElement {
     name: string,
     key: string,
     object: HassioHomeAssistantInfo | HassioSupervisorInfo | HassioHassOSInfo
-  ): TemplateResult {
+  ) {
     if (!object.update_available) {
-      return html``;
+      return nothing;
     }
     return html`
       <ha-card outlined>
@@ -151,5 +149,11 @@ export class HassioUpdate extends LitElement {
         }
       `,
     ];
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "hassio-update": HassioUpdate;
   }
 }

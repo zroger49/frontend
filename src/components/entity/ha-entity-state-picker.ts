@@ -1,14 +1,11 @@
 import { HassEntity } from "home-assistant-js-websocket";
-import { html, LitElement, PropertyValues, TemplateResult } from "lit";
-import { customElement, property, query } from "lit/decorators";
-import { computeStateDisplay } from "../../common/entity/compute_state_display";
-import { PolymerChangedEvent } from "../../polymer-types";
+import { LitElement, PropertyValues, html, nothing } from "lit";
+import { customElement, property, query, state } from "lit/decorators";
+import { fireEvent } from "../../common/dom/fire_event";
 import { getStates } from "../../common/entity/get_states";
-import { HomeAssistant } from "../../types";
+import { HomeAssistant, ValueChangedEvent } from "../../types";
 import "../ha-combo-box";
 import type { HaComboBox } from "../ha-combo-box";
-import { formatAttributeValue } from "../../data/entity_attributes";
-import { fireEvent } from "../../common/dom/fire_event";
 
 export type HaEntityPickerEntityFilterFunc = (entityId: HassEntity) => boolean;
 
@@ -19,6 +16,8 @@ class HaEntityStatePicker extends LitElement {
   @property() public entityId?: string;
 
   @property() public attribute?: string;
+
+  @property({ attribute: false }) public extraOptions?: any[];
 
   @property({ type: Boolean }) public autofocus = false;
 
@@ -35,7 +34,7 @@ class HaEntityStatePicker extends LitElement {
 
   @property() public helper?: string;
 
-  @property({ type: Boolean }) private _opened = false;
+  @state() private _opened = false;
 
   @query("ha-combo-box", true) private _comboBox!: HaComboBox;
 
@@ -44,28 +43,36 @@ class HaEntityStatePicker extends LitElement {
   }
 
   protected updated(changedProps: PropertyValues) {
-    if (changedProps.has("_opened") && this._opened) {
-      const state = this.entityId ? this.hass.states[this.entityId] : undefined;
-      (this._comboBox as any).items =
-        this.entityId && state
-          ? getStates(state, this.attribute).map((key) => ({
+    if (
+      (changedProps.has("_opened") && this._opened) ||
+      changedProps.has("entityId") ||
+      changedProps.has("attribute") ||
+      changedProps.has("extraOptions")
+    ) {
+      const stateObj = this.entityId
+        ? this.hass.states[this.entityId]
+        : undefined;
+      (this._comboBox as any).items = [
+        ...(this.extraOptions ?? []),
+        ...(this.entityId && stateObj
+          ? getStates(stateObj, this.attribute).map((key) => ({
               value: key,
               label: !this.attribute
-                ? computeStateDisplay(
-                    this.hass.localize,
-                    state,
-                    this.hass.locale,
+                ? this.hass.formatEntityState(stateObj, key)
+                : this.hass.formatEntityAttributeValue(
+                    stateObj,
+                    this.attribute,
                     key
-                  )
-                : formatAttributeValue(this.hass, key),
+                  ),
             }))
-          : [];
+          : []),
+      ];
     }
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.hass) {
-      return html``;
+      return nothing;
     }
 
     return html`
@@ -92,11 +99,11 @@ class HaEntityStatePicker extends LitElement {
     return this.value || "";
   }
 
-  private _openedChanged(ev: PolymerChangedEvent<boolean>) {
+  private _openedChanged(ev: ValueChangedEvent<boolean>) {
     this._opened = ev.detail.value;
   }
 
-  private _valueChanged(ev: PolymerChangedEvent<string>) {
+  private _valueChanged(ev: ValueChangedEvent<string>) {
     ev.stopPropagation();
     const newValue = ev.detail.value;
     if (newValue !== this._value) {

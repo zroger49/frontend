@@ -1,5 +1,5 @@
 import "@material/mwc-button";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { property, state } from "lit/decorators";
 import memoizeOne from "memoize-one";
 import { fireEvent } from "../../../common/dom/fire_event";
@@ -55,9 +55,9 @@ class DialogZoneDetail extends LitElement {
     fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._params || !this._data) {
-      return html``;
+      return nothing;
     }
     const nameInvalid = this._data.name.trim() === "";
     const iconInvalid = Boolean(
@@ -109,7 +109,7 @@ class DialogZoneDetail extends LitElement {
                 ${this.hass!.localize("ui.panel.config.zone.detail.delete")}
               </mwc-button>
             `
-          : html``}
+          : nothing}
         <mwc-button
           slot="primaryAction"
           @click=${this._updateEntry}
@@ -152,13 +152,13 @@ class DialogZoneDetail extends LitElement {
             {
               name: "latitude",
               required: true,
-              selector: { text: {} },
+              selector: { number: {} },
             },
             {
               name: "longitude",
               required: true,
 
-              selector: { text: {} },
+              selector: { number: {} },
             },
           ],
         },
@@ -183,7 +183,7 @@ class DialogZoneDetail extends LitElement {
 
   private _valueChanged(ev: CustomEvent) {
     this._error = undefined;
-    const value = ev.detail.value;
+    const value = { ...ev.detail.value };
     if (
       value.location.latitude !== this._data!.latitude ||
       value.location.longitude !== this._data!.longitude ||
@@ -236,7 +236,7 @@ class DialogZoneDetail extends LitElement {
       haStyleDialog,
       css`
         ha-dialog {
-          --mdc-dialog-min-width: 600px;
+          --mdc-dialog-min-width: min(600px, 95vw);
         }
         @media all and (max-width: 450px), all and (max-height: 500px) {
           ha-dialog {

@@ -1,3 +1,4 @@
+import "@material/mwc-button";
 import {
   mdiArrowDown,
   mdiArrowLeft,
@@ -9,12 +10,12 @@ import {
   mdiLeaf,
   mdiSolarPower,
   mdiTransmissionTower,
+  mdiWater,
 } from "@mdi/js";
 import { UnsubscribeFunc } from "home-assistant-js-websocket";
-import { css, html, LitElement, svg } from "lit";
+import { css, html, LitElement, svg, nothing, PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
-import "@material/mwc-button";
 import { formatNumber } from "../../../../common/number/format_number";
 import "../../../../components/ha-card";
 import "../../../../components/ha-svg-icon";
@@ -23,12 +24,14 @@ import {
   energySourcesByType,
   getEnergyDataCollection,
   getEnergyGasUnit,
+  getEnergyWaterUnit,
 } from "../../../../data/energy";
 import { calculateStatisticsSumGrowth } from "../../../../data/recorder";
 import { SubscribeMixin } from "../../../../mixins/subscribe-mixin";
 import { HomeAssistant } from "../../../../types";
 import { LovelaceCard } from "../../types";
 import { EnergyDistributionCardConfig } from "../types";
+import { hasConfigChanged } from "../../common/has-changed";
 
 const CIRCLE_CIRCUMFERENCE = 238.76104;
 
@@ -63,9 +66,20 @@ class HuiEnergyDistrubutionCard
     return 3;
   }
 
+  protected shouldUpdate(changedProps: PropertyValues): boolean {
+    return (
+      hasConfigChanged(this, changedProps) ||
+      changedProps.size > 1 ||
+      !changedProps.has("hass") ||
+      (!!this._data?.co2SignalEntity &&
+        this.hass.states[this._data.co2SignalEntity] !==
+          changedProps.get("hass").states[this._data.co2SignalEntity])
+    );
+  }
+
   protected render() {
     if (!this._config) {
-      return html``;
+      return nothing;
     }
 
     if (!this._data) {
@@ -83,6 +97,7 @@ class HuiEnergyDistrubutionCard
     const hasSolarProduction = types.solar !== undefined;
     const hasBattery = types.battery !== undefined;
     const hasGas = types.gas !== undefined;
+    const hasWater = types.water !== undefined;
     const hasReturnToGrid = hasConsumption && types.grid![0].flow_to.length > 0;
 
     const totalFromGrid =
@@ -90,6 +105,15 @@ class HuiEnergyDistrubutionCard
         this._data.stats,
         types.grid![0].flow_from.map((flow) => flow.stat_energy_from)
       ) ?? 0;
+
+    let waterUsage: number | null = null;
+    if (hasWater) {
+      waterUsage =
+        calculateStatisticsSumGrowth(
+          this._data.stats,
+          types.water!.map((source) => source.stat_energy_from)
+        ) ?? 0;
+    }
 
     let gasUsage: number | null = null;
     if (hasGas) {
@@ -255,7 +279,10 @@ class HuiEnergyDistrubutionCard
     return html`
       <ha-card .header=${this._config.title}>
         <div class="card-content">
-          ${lowCarbonEnergy !== undefined || hasSolarProduction || hasGas
+          ${lowCarbonEnergy !== undefined ||
+          hasSolarProduction ||
+          hasGas ||
+          hasWater
             ? html`<div class="row">
                 ${lowCarbonEnergy === undefined
                   ? html`<div class="spacer"></div>`
@@ -298,9 +325,9 @@ class HuiEnergyDistrubutionCard
                         kWh
                       </div>
                     </div>`
-                  : hasGas
-                  ? html`<div class="spacer"></div>`
-                  : ""}
+                  : hasGas || hasWater
+                    ? html`<div class="spacer"></div>`
+                    : ""}
                 ${hasGas
                   ? html`<div class="circle-container gas">
                       <span class="label"
@@ -338,7 +365,40 @@ class HuiEnergyDistrubutionCard
                           : ""}
                       </svg>
                     </div>`
-                  : html`<div class="spacer"></div>`}
+                  : hasWater
+                    ? html`<div class="circle-container water">
+                        <span class="label"
+                          >${this.hass.localize(
+                            "ui.panel.lovelace.cards.energy.energy_distribution.water"
+                          )}</span
+                        >
+                        <div class="circle">
+                          <ha-svg-icon .path=${mdiWater}></ha-svg-icon>
+                          ${formatNumber(waterUsage || 0, this.hass.locale, {
+                            maximumFractionDigits: 1,
+                          })}
+                          ${getEnergyWaterUnit(this.hass) || "m³"}
+                        </div>
+                        <svg width="80" height="30">
+                          <path d="M40 0 v30" id="water" />
+                          ${waterUsage
+                            ? svg`<circle
+                r="1"
+                class="water"
+                vector-effect="non-scaling-stroke"
+              >
+                <animateMotion
+                  dur="2s"
+                  repeatCount="indefinite"
+                  calcMode="linear"
+                >
+                  <mpath xlink:href="#water" />
+                </animateMotion>
+              </circle>`
+                            : ""}
+                        </svg>
+                      </div>`
+                    : html`<div class="spacer"></div>`}
               </div>`
             : ""}
           <div class="row">
@@ -398,8 +458,8 @@ class HuiEnergyDistrubutionCard
                             cy="40"
                             r="38"
                             stroke-dasharray="${homeSolarCircumference} ${
-                            CIRCLE_CIRCUMFERENCE - homeSolarCircumference
-                          }"
+                              CIRCLE_CIRCUMFERENCE - homeSolarCircumference
+                            }"
                             shape-rendering="geometricPrecision"
                             stroke-dashoffset="-${
                               CIRCLE_CIRCUMFERENCE - homeSolarCircumference
@@ -413,8 +473,8 @@ class HuiEnergyDistrubutionCard
                             cy="40"
                             r="38"
                             stroke-dasharray="${homeBatteryCircumference} ${
-                            CIRCLE_CIRCUMFERENCE - homeBatteryCircumference
-                          }"
+                              CIRCLE_CIRCUMFERENCE - homeBatteryCircumference
+                            }"
                             stroke-dashoffset="-${
                               CIRCLE_CIRCUMFERENCE -
                               homeBatteryCircumference -
@@ -430,8 +490,8 @@ class HuiEnergyDistrubutionCard
                             cy="40"
                             r="38"
                             stroke-dasharray="${homeLowCarbonCircumference} ${
-                            CIRCLE_CIRCUMFERENCE - homeLowCarbonCircumference
-                          }"
+                              CIRCLE_CIRCUMFERENCE - homeLowCarbonCircumference
+                            }"
                             stroke-dashoffset="-${
                               CIRCLE_CIRCUMFERENCE -
                               homeLowCarbonCircumference -
@@ -460,50 +520,99 @@ class HuiEnergyDistrubutionCard
                     </svg>`
                   : ""}
               </div>
-              <span class="label"
-                >${this.hass.localize(
-                  "ui.panel.lovelace.cards.energy.energy_distribution.home"
-                )}</span
-              >
+              ${hasGas && hasWater
+                ? ""
+                : html`<span class="label"
+                    >${this.hass.localize(
+                      "ui.panel.lovelace.cards.energy.energy_distribution.home"
+                    )}</span
+                  >`}
             </div>
           </div>
-          ${hasBattery
+          ${hasBattery || (hasGas && hasWater)
             ? html`<div class="row">
                 <div class="spacer"></div>
-                <div class="circle-container battery">
-                  <div class="circle">
-                    <ha-svg-icon .path=${mdiBatteryHigh}></ha-svg-icon>
-                    <span class="battery-in">
-                      <ha-svg-icon
-                        class="small"
-                        .path=${mdiArrowDown}
-                      ></ha-svg-icon
-                      >${formatNumber(totalBatteryIn || 0, this.hass.locale, {
-                        maximumFractionDigits: 1,
-                      })}
-                      kWh</span
-                    >
-                    <span class="battery-out">
-                      <ha-svg-icon
-                        class="small"
-                        .path=${mdiArrowUp}
-                      ></ha-svg-icon
-                      >${formatNumber(totalBatteryOut || 0, this.hass.locale, {
-                        maximumFractionDigits: 1,
-                      })}
-                      kWh</span
-                    >
-                  </div>
-                  <span class="label"
-                    >${this.hass.localize(
-                      "ui.panel.lovelace.cards.energy.energy_distribution.battery"
-                    )}</span
+                ${hasBattery
+                  ? html` <div class="circle-container battery">
+                      <div class="circle">
+                        <ha-svg-icon .path=${mdiBatteryHigh}></ha-svg-icon>
+                        <span class="battery-in">
+                          <ha-svg-icon
+                            class="small"
+                            .path=${mdiArrowDown}
+                          ></ha-svg-icon
+                          >${formatNumber(
+                            totalBatteryIn || 0,
+                            this.hass.locale,
+                            {
+                              maximumFractionDigits: 1,
+                            }
+                          )}
+                          kWh</span
+                        >
+                        <span class="battery-out">
+                          <ha-svg-icon
+                            class="small"
+                            .path=${mdiArrowUp}
+                          ></ha-svg-icon
+                          >${formatNumber(
+                            totalBatteryOut || 0,
+                            this.hass.locale,
+                            {
+                              maximumFractionDigits: 1,
+                            }
+                          )}
+                          kWh</span
+                        >
+                      </div>
+                      <span class="label"
+                        >${this.hass.localize(
+                          "ui.panel.lovelace.cards.energy.energy_distribution.battery"
+                        )}</span
+                      >
+                    </div>`
+                  : html`<div class="spacer"></div>`}
+                ${hasGas && hasWater
+                  ? html`<div class="circle-container water bottom">
+                      <svg width="80" height="30">
+                        <path d="M40 30 v-30" id="water" />
+                        ${waterUsage
+                          ? svg`<circle
+                    r="1"
+                    class="water"
+                    vector-effect="non-scaling-stroke"
                   >
-                </div>
-                <div class="spacer"></div>
+                    <animateMotion
+                      dur="2s"
+                      repeatCount="indefinite"
+                      calcMode="linear"
+                    >
+                      <mpath xlink:href="#water" />
+                    </animateMotion>
+                  </circle>`
+                          : ""}
+                      </svg>
+                      <div class="circle">
+                        <ha-svg-icon .path=${mdiWater}></ha-svg-icon>
+                        ${formatNumber(waterUsage || 0, this.hass.locale, {
+                          maximumFractionDigits: 1,
+                        })}
+                        ${getEnergyWaterUnit(this.hass) || "m³"}
+                      </div>
+                      <span class="label"
+                        >${this.hass.localize(
+                          "ui.panel.lovelace.cards.energy.energy_distribution.water"
+                        )}</span
+                      >
+                    </div>`
+                  : html`<div class="spacer"></div>`}
               </div>`
             : ""}
-          <div class="lines ${classMap({ battery: hasBattery })}">
+          <div
+            class="lines ${classMap({
+              high: hasBattery || (hasGas && hasWater),
+            })}"
+          >
             <svg
               viewBox="0 0 100 100"
               xmlns="http://www.w3.org/2000/svg"
@@ -514,8 +623,8 @@ class HuiEnergyDistrubutionCard
                     id="return"
                     class="return"
                     d="M${hasBattery ? 45 : 47},0 v15 c0,${
-                    hasBattery ? "35 -10,30 -30,30" : "40 -10,35 -30,35"
-                  } h-20"
+                      hasBattery ? "35 -10,30 -30,30" : "40 -10,35 -30,35"
+                    } h-20"
                     vector-effect="non-scaling-stroke"
                   ></path> `
                 : ""}
@@ -524,8 +633,8 @@ class HuiEnergyDistrubutionCard
                     id="solar"
                     class="solar"
                     d="M${hasBattery ? 55 : 53},0 v15 c0,${
-                    hasBattery ? "35 10,30 30,30" : "40 10,35 30,35"
-                  } h20"
+                      hasBattery ? "35 10,30 30,30" : "40 10,35 30,35"
+                    } h20"
                     vector-effect="non-scaling-stroke"
                   ></path>`
                 : ""}
@@ -713,7 +822,7 @@ class HuiEnergyDistrubutionCard
       padding: 0 16px 16px;
       box-sizing: border-box;
     }
-    .lines.battery {
+    .lines.high {
       bottom: 100px;
       height: 156px;
     }
@@ -743,6 +852,15 @@ class HuiEnergyDistrubutionCard
     .circle-container.gas {
       margin-left: 4px;
       height: 130px;
+    }
+    .circle-container.water {
+      margin-left: 4px;
+      height: 130px;
+    }
+    .circle-container.water.bottom {
+      position: relative;
+      top: -20px;
+      margin-bottom: -20px;
     }
     .circle-container.battery {
       height: 110px;
@@ -777,6 +895,12 @@ class HuiEnergyDistrubutionCard
     .label {
       color: var(--secondary-text-color);
       font-size: 12px;
+      opacity: 1;
+      height: 20px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 80px;
+      white-space: nowrap;
     }
     line,
     path {
@@ -803,6 +927,17 @@ class HuiEnergyDistrubutionCard
     }
     .gas .circle {
       border-color: var(--energy-gas-color);
+    }
+    .water path,
+    .water circle {
+      stroke: var(--energy-water-color);
+    }
+    circle.water {
+      stroke-width: 4;
+      fill: var(--energy-water-color);
+    }
+    .water .circle {
+      border-color: var(--energy-water-color);
     }
     .low-carbon line {
       stroke: var(--energy-non-fossil-color);
@@ -901,7 +1036,9 @@ class HuiEnergyDistrubutionCard
     }
     .circle svg circle {
       animation: rotate-in 0.6s ease-in;
-      transition: stroke-dashoffset 0.4s, stroke-dasharray 0.4s;
+      transition:
+        stroke-dashoffset 0.4s,
+        stroke-dasharray 0.4s;
       fill: none;
     }
     @keyframes rotate-in {

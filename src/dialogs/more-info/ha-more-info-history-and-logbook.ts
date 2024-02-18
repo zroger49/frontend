@@ -1,11 +1,13 @@
-import { LitElement, html } from "lit";
-import { customElement, property } from "lit/decorators";
+import { css, CSSResultGroup, html, LitElement } from "lit";
+import { customElement, property, query } from "lit/decorators";
+import { ChartResizeOptions } from "../../components/chart/ha-chart-base";
 import { HomeAssistant } from "../../types";
 import {
   computeShowHistoryComponent,
   computeShowLogBookComponent,
 } from "./const";
 import "./ha-more-info-history";
+import type { MoreInfoHistory } from "./ha-more-info-history";
 import "./ha-more-info-logbook";
 
 @customElement("ha-more-info-history-and-logbook")
@@ -13,6 +15,13 @@ export class MoreInfoHistoryAndLogbook extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
   @property() public entityId!: string;
+
+  @query("ha-more-info-history")
+  private _history?: MoreInfoHistory;
+
+  public resize(options?: ChartResizeOptions) {
+    this._history?.resize(options);
+  }
 
   protected render() {
     return html`
@@ -32,6 +41,18 @@ export class MoreInfoHistoryAndLogbook extends LitElement {
             ></ha-more-info-logbook>
           `
         : ""}
+    `;
+  }
+
+  static get styles(): CSSResultGroup {
+    return css`
+      ha-more-info-history,
+      ha-more-info-logbook {
+        display: block;
+      }
+      ha-more-info-history + ha-more-info-logbook {
+        margin-top: 16px;
+      }
     `;
   }
 }

@@ -7,6 +7,7 @@ import {
 import { HomeAssistant } from "../../../../../types";
 import { navigate } from "../../../../../common/navigate";
 import { PageNavigation } from "../../../../../layouts/hass-tabs-subpage";
+import { getConfigEntries } from "../../../../../data/config_entries";
 
 export const configTabs: PageNavigation[] = [
   {
@@ -25,9 +26,9 @@ export const configTabs: PageNavigation[] = [
 class ZWaveJSConfigRouter extends HassRouterPage {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public isWide!: boolean;
+  @property({ type: Boolean }) public isWide = false;
 
-  @property() public narrow!: boolean;
+  @property({ type: Boolean }) public narrow = false;
 
   private _configEntry = new URLSearchParams(window.location.search).get(
     "config_entry"
@@ -40,6 +41,10 @@ class ZWaveJSConfigRouter extends HassRouterPage {
       dashboard: {
         tag: "zwave_js-config-dashboard",
         load: () => import("./zwave_js-config-dashboard"),
+      },
+      add: {
+        tag: "zwave_js-add-node",
+        load: () => import("./zwave_js-add-node"),
       },
       node_config: {
         tag: "zwave_js-node-config",
@@ -54,6 +59,7 @@ class ZWaveJSConfigRouter extends HassRouterPage {
         load: () => import("./zwave_js-provisioned"),
       },
     },
+    initialLoad: () => this._fetchConfigEntries(),
   };
 
   protected updatePageEl(el): void {
@@ -72,6 +78,18 @@ class ZWaveJSConfigRouter extends HassRouterPage {
         }?${searchParams.toString()}`,
         { replace: true }
       );
+    }
+  }
+
+  private async _fetchConfigEntries() {
+    if (this._configEntry) {
+      return;
+    }
+    const entries = await getConfigEntries(this.hass, {
+      domain: "zwave_js",
+    });
+    if (entries.length) {
+      this._configEntry = entries[0].entry_id;
     }
   }
 }

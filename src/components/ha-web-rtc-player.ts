@@ -8,6 +8,7 @@ import {
 } from "lit";
 import { customElement, property, state, query } from "lit/decorators";
 import { isComponentLoaded } from "../common/config/is_component_loaded";
+import { fireEvent } from "../common/dom/fire_event";
 import { handleWebRtcOffer, WebRtcAnswer } from "../data/camera";
 import { fetchWebRtcSettings } from "../data/rtsp_to_webrtc";
 import type { HomeAssistant } from "../types";
@@ -59,6 +60,7 @@ class HaWebRtcPlayer extends LitElement {
         ?playsinline=${this.playsInline}
         ?controls=${this.controls}
         .poster=${this.posterUrl}
+        @loadeddata=${this._loadedData}
       ></video>
     `;
   }
@@ -100,9 +102,8 @@ class HaWebRtcPlayer extends LitElement {
       offerToReceiveAudio: true,
       offerToReceiveVideo: true,
     };
-    const offer: RTCSessionDescriptionInit = await peerConnection.createOffer(
-      offerOptions
-    );
+    const offer: RTCSessionDescriptionInit =
+      await peerConnection.createOffer(offerOptions);
     await peerConnection.setLocalDescription(offer);
 
     let candidates = ""; // Build an Offer SDP string with ice candidates
@@ -186,6 +187,11 @@ class HaWebRtcPlayer extends LitElement {
       this._peerConnection.close();
       this._peerConnection = undefined;
     }
+  }
+
+  private _loadedData() {
+    // @ts-ignore
+    fireEvent(this, "load");
   }
 
   static get styles(): CSSResultGroup {

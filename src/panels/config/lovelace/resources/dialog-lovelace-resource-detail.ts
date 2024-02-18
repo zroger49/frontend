@@ -1,12 +1,12 @@
 import "@material/mwc-button/mwc-button";
-import { CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import memoizeOne from "memoize-one";
 import { fireEvent } from "../../../../common/dom/fire_event";
 import { createCloseHeading } from "../../../../components/ha-dialog";
 import "../../../../components/ha-form/ha-form";
 import { SchemaUnion } from "../../../../components/ha-form/types";
-import { LovelaceResourcesMutableParams } from "../../../../data/lovelace";
+import { LovelaceResourcesMutableParams } from "../../../../data/lovelace/resource";
 import { haStyleDialog } from "../../../../resources/styles";
 import { HomeAssistant } from "../../../../types";
 import { LovelaceResourceDetailsDialogParams } from "./show-dialog-lovelace-resource-detail";
@@ -60,9 +60,9 @@ export class DialogLovelaceResourceDetail extends LitElement {
     fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._params) {
-      return html``;
+      return nothing;
     }
     const urlInvalid = !this._data?.url || this._data.url.trim() === "";
     return html`
@@ -114,7 +114,7 @@ export class DialogLovelaceResourceDetail extends LitElement {
                 )}
               </mwc-button>
             `
-          : html``}
+          : nothing}
         <mwc-button
           slot="primaryAction"
           @click=${this._updateResource}

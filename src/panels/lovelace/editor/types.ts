@@ -1,11 +1,12 @@
+import { ActionConfig } from "../../../data/lovelace/config/action";
+import { LovelaceCardConfig } from "../../../data/lovelace/config/card";
 import {
-  ActionConfig,
-  LovelaceCardConfig,
   LovelaceViewConfig,
   ShowViewConfig,
-} from "../../../data/lovelace";
+} from "../../../data/lovelace/config/view";
 import { EntityConfig, LovelaceRowConfig } from "../entity-rows/types";
 import { LovelaceHeaderFooterConfig } from "../header-footer/types";
+import { LovelaceCardFeatureConfig } from "../card-features/types";
 
 export interface YamlChangedEvent extends Event {
   detail: {
@@ -74,8 +75,11 @@ export interface CardPickTarget extends EventTarget {
 
 export interface SubElementEditorConfig {
   index?: number;
-  elementConfig?: LovelaceRowConfig | LovelaceHeaderFooterConfig;
-  type: "header" | "footer" | "row";
+  elementConfig?:
+    | LovelaceRowConfig
+    | LovelaceHeaderFooterConfig
+    | LovelaceCardFeatureConfig;
+  type: "header" | "footer" | "row" | "feature";
 }
 
 export interface EditSubElementEvent {

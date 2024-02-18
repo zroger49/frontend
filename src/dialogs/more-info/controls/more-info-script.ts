@@ -1,5 +1,5 @@
 import { HassEntity } from "home-assistant-js-websocket";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 import "../../../components/ha-relative-time";
 import { HomeAssistant } from "../../../types";
@@ -8,11 +8,11 @@ import { HomeAssistant } from "../../../types";
 class MoreInfoScript extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public stateObj?: HassEntity;
+  @property({ attribute: false }) public stateObj?: HassEntity;
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.hass || !this.stateObj) {
-      return html``;
+      return nothing;
     }
 
     return html`

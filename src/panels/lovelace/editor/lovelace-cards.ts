@@ -38,6 +38,10 @@ export const coreCards: Card[] = [
     showElement: false,
   },
   {
+    type: "statistic",
+    showElement: true,
+  },
+  {
     type: "humidifier",
     showElement: true,
   },
@@ -119,6 +123,6 @@ export const coreCards: Card[] = [
     type: "vertical-stack",
   },
   {
-    type: "shopping-list",
+    type: "todo-list",
   },
 ];

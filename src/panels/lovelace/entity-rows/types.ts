@@ -1,4 +1,4 @@
-import { ActionConfig } from "../../../data/lovelace";
+import { ActionConfig } from "../../../data/lovelace/config/action";
 import { HomeAssistant } from "../../../types";
 import { Condition } from "../common/validate-condition";
 import { TimestampRenderingFormat } from "../components/types";
@@ -55,7 +55,7 @@ export interface CastConfig {
   type: "cast";
   icon?: string;
   name?: string;
-  view: string | number;
+  view?: string | number;
   dashboard?: string;
   // Hide the row if either unsupported browser or no API available.
   hide_if_unavailable?: boolean;

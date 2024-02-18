@@ -191,6 +191,12 @@
       "runOptions": {
         "instanceLimit": 1
       }
+    },
+    {
+      "label": "Setup and fetch nightly translations",
+      "type": "gulp",
+      "task": "setup-and-fetch-nightly-translations",
+      "problemMatcher": []
     }
   ],
   "inputs": [

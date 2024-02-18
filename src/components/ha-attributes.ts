@@ -1,38 +1,56 @@
 import { HassEntity } from "home-assistant-js-websocket";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators";
 import {
-  formatAttributeName,
-  formatAttributeValue,
-  STATE_ATTRIBUTES,
-} from "../data/entity_attributes";
+  css,
+  CSSResultGroup,
+  html,
+  LitElement,
+  nothing,
+  PropertyValues,
+} from "lit";
+import { customElement, property, state } from "lit/decorators";
+import { computeAttributeNameDisplay } from "../common/entity/compute_attribute_display";
+import { STATE_ATTRIBUTES } from "../data/entity_attributes";
 import { haStyle } from "../resources/styles";
 import { HomeAssistant } from "../types";
-
+import "./ha-attribute-value";
 import "./ha-expansion-panel";
 
 @customElement("ha-attributes")
 class HaAttributes extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public stateObj?: HassEntity;
+  @property({ attribute: false }) public stateObj?: HassEntity;
 
   @property({ attribute: "extra-filters" }) public extraFilters?: string;
 
   @state() private _expanded = false;
 
-  protected render(): TemplateResult {
-    if (!this.stateObj) {
-      return html``;
-    }
-
-    const attributes = this.computeDisplayAttributes(
+  private get _filteredAttributes() {
+    return this.computeDisplayAttributes(
       STATE_ATTRIBUTES.concat(
         this.extraFilters ? this.extraFilters.split(",") : []
       )
     );
+  }
+
+  protected willUpdate(changedProperties: PropertyValues): void {
+    if (
+      changedProperties.has("extraFilters") ||
+      changedProperties.has("stateObj")
+    ) {
+      this.toggleAttribute("empty", this._filteredAttributes.length === 0);
+    }
+  }
+
+  protected render() {
+    if (!this.stateObj) {
+      return nothing;
+    }
+
+    const attributes = this._filteredAttributes;
+
     if (attributes.length === 0) {
-      return html``;
+      return nothing;
     }
 
     return html`
@@ -49,9 +67,20 @@ class HaAttributes extends LitElement {
                 ${attributes.map(
                   (attribute) => html`
                     <div class="data-entry">
-                      <div class="key">${formatAttributeName(attribute)}</div>
+                      <div class="key">
+                        ${computeAttributeNameDisplay(
+                          this.hass.localize,
+                          this.stateObj!,
+                          this.hass.entities,
+                          attribute
+                        )}
+                      </div>
                       <div class="value">
-                        ${this.formatAttribute(attribute)}
+                        <ha-attribute-value
+                          .hass=${this.hass}
+                          .attribute=${attribute}
+                          .stateObj=${this.stateObj}
+                        ></ha-attribute-value>
                       </div>
                     </div>
                   `
@@ -96,13 +125,6 @@ class HaAttributes extends LitElement {
           text-align: center;
           margin-top: 16px;
         }
-        pre {
-          font-family: inherit;
-          font-size: inherit;
-          margin: 0px;
-          overflow-wrap: break-word;
-          white-space: pre-line;
-        }
         hr {
           border-color: var(--divider-color);
           border-bottom: none;
@@ -119,14 +141,6 @@ class HaAttributes extends LitElement {
     return Object.keys(this.stateObj.attributes).filter(
       (key) => filtersArray.indexOf(key) === -1
     );
-  }
-
-  private formatAttribute(attribute: string): string | TemplateResult {
-    if (!this.stateObj) {
-      return "—";
-    }
-    const value = this.stateObj.attributes[attribute];
-    return formatAttributeValue(this.hass, value);
   }
 
   private expandedChanged(ev) {

@@ -1,13 +1,13 @@
-import { mdiFolderEdit } from "@mdi/js";
 import "@material/mwc-button";
-import { css, html, LitElement, TemplateResult } from "lit";
+import { mdiFolderEdit } from "@mdi/js";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
+import { fireEvent } from "../../common/dom/fire_event";
 import { MediaPlayerItem } from "../../data/media-player";
-import "../ha-svg-icon";
 import { isLocalMediaSourceContentId } from "../../data/media_source";
 import type { HomeAssistant } from "../../types";
+import "../ha-svg-icon";
 import { showMediaManageDialog } from "./show-media-manage-dialog";
-import { fireEvent } from "../../common/dom/fire_event";
 
 declare global {
   interface HASSDomEvents {
@@ -19,16 +19,16 @@ declare global {
 class MediaManageButton extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() currentItem?: MediaPlayerItem;
+  @property({ attribute: false }) currentItem?: MediaPlayerItem;
 
   @state() _uploading = 0;
 
-  protected render(): TemplateResult {
+  protected render() {
     if (
       !this.currentItem ||
       !isLocalMediaSourceContentId(this.currentItem.media_content_id || "")
     ) {
-      return html``;
+      return nothing;
     }
     return html`
       <mwc-button

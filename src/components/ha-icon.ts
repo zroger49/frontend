@@ -1,23 +1,22 @@
-import "@polymer/iron-icon/iron-icon";
 import {
-  css,
   CSSResultGroup,
-  html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  css,
+  html,
+  nothing,
 } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../common/dom/fire_event";
 import { debounce } from "../common/util/debounce";
 import { CustomIcon, customIcons } from "../data/custom_icons";
 import {
-  checkCacheVersion,
   Chunks,
-  findIconChunk,
-  getIcon,
   Icons,
   MDI_PREFIXES,
+  checkCacheVersion,
+  findIconChunk,
+  getIcon,
   writeCache,
 } from "../data/iconsets";
 import "./ha-svg-icon";
@@ -29,102 +28,7 @@ interface DeprecatedIcon {
   };
 }
 
-const mdiDeprecatedIcons: DeprecatedIcon = {
-  "android-messages": {
-    newName: "message-text",
-    removeIn: "2022.10",
-  },
-  "book-variant-multiple": {
-    newName: "bookmark-box-multiple",
-    removeIn: "2022.10",
-  },
-  "desktop-mac": {
-    newName: "monitor",
-    removeIn: "2022.10",
-  },
-  "desktop-mac-dashboard": {
-    newName: "monitor-dashboard",
-    removeIn: "2022.10",
-  },
-  discord: {
-    removeIn: "2022.10",
-  },
-  "diving-scuba": {
-    newName: "diving-scuba-mask",
-    removeIn: "2022.10",
-  },
-  "email-send": {
-    newName: "email-arrow-right",
-    removeIn: "2022.10",
-  },
-  "email-send-outline": {
-    newName: "email-arrow-right-outline",
-    removeIn: "2022.10",
-  },
-  "email-receive": {
-    newName: "email-arrow-left",
-    removeIn: "2022.10",
-  },
-  "email-receive-outline": {
-    newName: "email-arrow-left-outline",
-    removeIn: "2022.10",
-  },
-  "format-textdirection-r-to-l": {
-    newName: "format-pilcrow-arrow-left",
-    removeIn: "2022.10",
-  },
-  "format-textdirection-l-to-r": {
-    newName: "format-pilcrow-arrow-right",
-    removeIn: "2022.10",
-  },
-  "google-controller": {
-    newName: "controller",
-    removeIn: "2022.10",
-  },
-  "google-controller-off": {
-    newName: "controller-off",
-    removeIn: "2022.10",
-  },
-  "google-home": {
-    removeIn: "2022.10",
-  },
-  lecturn: {
-    newName: "lectern",
-    removeIn: "2022.10",
-  },
-  receipt: {
-    newName: "receipt-text",
-    removeIn: "2022.10",
-  },
-  "receipt-outline": {
-    newName: "receipt-text-outline",
-    removeIn: "2022.10",
-  },
-  "tablet-android": {
-    newName: "tablet",
-    removeIn: "2022.10",
-  },
-  "text-to-speech": {
-    newName: "microphone-message",
-    removeIn: "2022.10",
-  },
-  "text-to-speech-off": {
-    newName: "microphone-message-off",
-    removeIn: "2022.10",
-  },
-  "timeline-help": {
-    newName: "timeline-question",
-    removeIn: "2022.10",
-  },
-  "timeline-help-outline": {
-    newName: "timeline-question-outline",
-    removeIn: "2022.10",
-  },
-  "vector-point": {
-    newName: "vector-point-select",
-    removeIn: "2022.10",
-  },
-};
+const mdiDeprecatedIcons: DeprecatedIcon = {};
 
 const chunks: Chunks = {};
 
@@ -143,6 +47,8 @@ export class HaIcon extends LitElement {
 
   @state() private _path?: string;
 
+  @state() private _secondaryPath?: string;
+
   @state() private _viewBox?: string;
 
   @state() private _legacy = false;
@@ -151,20 +57,23 @@ export class HaIcon extends LitElement {
     super.willUpdate(changedProps);
     if (changedProps.has("icon")) {
       this._path = undefined;
+      this._secondaryPath = undefined;
       this._viewBox = undefined;
       this._loadIcon();
     }
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.icon) {
-      return html``;
+      return nothing;
     }
     if (this._legacy) {
-      return html`<iron-icon .icon=${this.icon}></iron-icon>`;
+      return html`<!-- @ts-ignore we don't provice the iron-icon element -->
+        <iron-icon .icon=${this.icon}></iron-icon>`;
     }
     return html`<ha-svg-icon
       .path=${this._path}
+      .secondaryPath=${this._secondaryPath}
       .viewBox=${this._viewBox}
     ></ha-svg-icon>`;
   }
@@ -183,8 +92,8 @@ export class HaIcon extends LitElement {
     }
 
     if (!MDI_PREFIXES.includes(iconPrefix)) {
-      if (iconPrefix in customIcons) {
-        const customIcon = customIcons[iconPrefix];
+      const customIcon = customIcons[iconPrefix];
+      if (customIcon) {
         if (customIcon && typeof customIcon.getIcon === "function") {
           this._setCustomPath(customIcon.getIcon(iconName), requestedIcon);
         }
@@ -216,6 +125,17 @@ export class HaIcon extends LitElement {
 
     if (iconName in cachedIcons) {
       this._path = cachedIcons[iconName];
+      return;
+    }
+
+    if (iconName === "home-assistant") {
+      const icon = (await import("../resources/home-assistant-logo-svg"))
+        .mdiHomeAssistant;
+
+      if (this.icon === requestedIcon) {
+        this._path = icon;
+      }
+      cachedIcons[iconName] = icon;
       return;
     }
 
@@ -259,6 +179,7 @@ export class HaIcon extends LitElement {
       return;
     }
     this._path = icon.path;
+    this._secondaryPath = icon.secondaryPath;
     this._viewBox = icon.viewBox;
   }
 

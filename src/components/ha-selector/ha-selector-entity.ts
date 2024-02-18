@@ -1,6 +1,8 @@
 import { HassEntity } from "home-assistant-js-websocket";
-import { html, LitElement, PropertyValues } from "lit";
+import { html, LitElement, PropertyValues, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
+import { ensureArray } from "../../common/array/ensure-array";
+import { fireEvent } from "../../common/dom/fire_event";
 import {
   EntitySources,
   fetchEntitySourcesWithCache,
@@ -13,9 +15,9 @@ import "../entity/ha-entity-picker";
 
 @customElement("ha-selector-entity")
 export class HaEntitySelector extends LitElement {
-  @property() public hass!: HomeAssistant;
+  @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public selector!: EntitySelector;
+  @property({ attribute: false }) public selector!: EntitySelector;
 
   @state() private _entitySources?: EntitySources;
 
@@ -29,15 +31,38 @@ export class HaEntitySelector extends LitElement {
 
   @property({ type: Boolean }) public required = true;
 
+  private _hasIntegration(selector: EntitySelector) {
+    return (
+      selector.entity?.filter &&
+      ensureArray(selector.entity.filter).some((filter) => filter.integration)
+    );
+  }
+
+  protected willUpdate(changedProperties: PropertyValues): void {
+    if (changedProperties.has("selector") && this.value !== undefined) {
+      if (this.selector.entity?.multiple && !Array.isArray(this.value)) {
+        this.value = [this.value];
+        fireEvent(this, "value-changed", { value: this.value });
+      } else if (!this.selector.entity?.multiple && Array.isArray(this.value)) {
+        this.value = this.value[0];
+        fireEvent(this, "value-changed", { value: this.value });
+      }
+    }
+  }
+
   protected render() {
-    if (!this.selector.entity.multiple) {
+    if (this._hasIntegration(this.selector) && !this._entitySources) {
+      return nothing;
+    }
+
+    if (!this.selector.entity?.multiple) {
       return html`<ha-entity-picker
         .hass=${this.hass}
         .value=${this.value}
         .label=${this.label}
         .helper=${this.helper}
-        .includeEntities=${this.selector.entity.include_entities}
-        .excludeEntities=${this.selector.entity.exclude_entities}
+        .includeEntities=${this.selector.entity?.include_entities}
+        .excludeEntities=${this.selector.entity?.exclude_entities}
         .entityFilter=${this._filterEntities}
         .disabled=${this.disabled}
         .required=${this.required}
@@ -64,7 +89,7 @@ export class HaEntitySelector extends LitElement {
     super.updated(changedProps);
     if (
       changedProps.has("selector") &&
-      this.selector.entity.integration &&
+      this._hasIntegration(this.selector) &&
       !this._entitySources
     ) {
       fetchEntitySourcesWithCache(this.hass).then((sources) => {
@@ -73,8 +98,14 @@ export class HaEntitySelector extends LitElement {
     }
   }
 
-  private _filterEntities = (entity: HassEntity): boolean =>
-    filterSelectorEntities(this.selector.entity, entity, this._entitySources);
+  private _filterEntities = (entity: HassEntity): boolean => {
+    if (!this.selector?.entity?.filter) {
+      return true;
+    }
+    return ensureArray(this.selector.entity.filter).some((filter) =>
+      filterSelectorEntities(filter, entity, this._entitySources)
+    );
+  };
 }
 
 declare global {

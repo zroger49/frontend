@@ -1,17 +1,20 @@
 import "@material/mwc-button";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import "@material/mwc-list/mwc-list";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { property, state } from "lit/decorators";
 import { fireEvent } from "../../../common/dom/fire_event";
-import { createCloseHeading } from "../../../components/ha-dialog";
 import "../../../components/ha-alert";
-import "../../../components/ha-textfield";
+import "../../../components/ha-aliases-editor";
+import { createCloseHeading } from "../../../components/ha-dialog";
 import "../../../components/ha-picture-upload";
 import type { HaPictureUpload } from "../../../components/ha-picture-upload";
+import "../../../components/ha-settings-row";
+import "../../../components/ha-icon-picker";
+import "../../../components/ha-textfield";
 import { AreaRegistryEntryMutableParams } from "../../../data/area_registry";
 import { CropOptions } from "../../../dialogs/image-cropper-dialog/show-image-cropper-dialog";
-import { PolymerChangedEvent } from "../../../polymer-types";
 import { haStyleDialog } from "../../../resources/styles";
-import { HomeAssistant } from "../../../types";
+import { HomeAssistant, ValueChangedEvent } from "../../../types";
 import { AreaRegistryDetailDialogParams } from "./show-dialog-area-registry-detail";
 
 const cropOptions: CropOptions = {
@@ -26,7 +29,11 @@ class DialogAreaDetail extends LitElement {
 
   @state() private _name!: string;
 
+  @state() private _aliases!: string[];
+
   @state() private _picture!: string | null;
+
+  @state() private _icon!: string | null;
 
   @state() private _error?: string;
 
@@ -40,7 +47,9 @@ class DialogAreaDetail extends LitElement {
     this._params = params;
     this._error = undefined;
     this._name = this._params.entry ? this._params.entry.name : "";
+    this._aliases = this._params.entry ? this._params.entry.aliases : [];
     this._picture = this._params.entry?.picture || null;
+    this._icon = this._params.entry?.icon || null;
     await this.updateComplete;
   }
 
@@ -50,9 +59,9 @@ class DialogAreaDetail extends LitElement {
     fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._params) {
-      return html``;
+      return nothing;
     }
     const entry = this._params.entry;
     const nameInvalid = !this._isNameValid();
@@ -63,8 +72,8 @@ class DialogAreaDetail extends LitElement {
         .heading=${createCloseHeading(
           this.hass,
           entry
-            ? entry.name
-            : this.hass.localize("ui.panel.config.areas.editor.default_name")
+            ? this.hass.localize("ui.panel.config.areas.editor.update_area")
+            : this.hass.localize("ui.panel.config.areas.editor.create_area")
         )}
       >
         <div>
@@ -74,25 +83,35 @@ class DialogAreaDetail extends LitElement {
           <div class="form">
             ${entry
               ? html`
-                  <div>
-                    ${this.hass.localize(
-                      "ui.panel.config.areas.editor.area_id"
-                    )}:
-                    ${entry.area_id}
-                  </div>
+                  <ha-settings-row>
+                    <span slot="heading">
+                      ${this.hass.localize(
+                        "ui.panel.config.areas.editor.area_id"
+                      )}
+                    </span>
+                    <span slot="description"> ${entry.area_id} </span>
+                  </ha-settings-row>
                 `
-              : ""}
+              : nothing}
 
             <ha-textfield
               .value=${this._name}
               @input=${this._nameChanged}
               .label=${this.hass.localize("ui.panel.config.areas.editor.name")}
-              .errorMessage=${this.hass.localize(
+              .validationMessage=${this.hass.localize(
                 "ui.panel.config.areas.editor.name_required"
               )}
-              .invalid=${nameInvalid}
+              required
               dialogInitialFocus
             ></ha-textfield>
+
+            <ha-icon-picker
+              .hass=${this.hass}
+              .value=${this._icon}
+              @value-changed=${this._iconChanged}
+              .label=${this.hass.localize("ui.panel.config.areas.editor.icon")}
+            ></ha-icon-picker>
+
             <ha-picture-upload
               .hass=${this.hass}
               .value=${this._picture}
@@ -100,28 +119,36 @@ class DialogAreaDetail extends LitElement {
               .cropOptions=${cropOptions}
               @change=${this._pictureChanged}
             ></ha-picture-upload>
+
+            <h3 class="header">
+              ${this.hass.localize(
+                "ui.panel.config.areas.editor.aliases_section"
+              )}
+            </h3>
+
+            <p class="description">
+              ${this.hass.localize(
+                "ui.panel.config.areas.editor.aliases_description"
+              )}
+            </p>
+            <ha-aliases-editor
+              .hass=${this.hass}
+              .aliases=${this._aliases}
+              @value-changed=${this._aliasesChanged}
+            ></ha-aliases-editor>
           </div>
         </div>
-        ${entry
-          ? html`
-              <mwc-button
-                slot="secondaryAction"
-                class="warning"
-                @click=${this._deleteEntry}
-                .disabled=${this._submitting}
-              >
-                ${this.hass.localize("ui.panel.config.areas.editor.delete")}
-              </mwc-button>
-            `
-          : html``}
+        <mwc-button slot="secondaryAction" @click=${this.closeDialog}>
+          ${this.hass.localize("ui.common.cancel")}
+        </mwc-button>
         <mwc-button
           slot="primaryAction"
           @click=${this._updateEntry}
           .disabled=${nameInvalid || this._submitting}
         >
           ${entry
-            ? this.hass.localize("ui.panel.config.areas.editor.update")
-            : this.hass.localize("ui.panel.config.areas.editor.create")}
+            ? this.hass.localize("ui.common.save")
+            : this.hass.localize("ui.common.add")}
         </mwc-button>
       </ha-dialog>
     `;
@@ -136,22 +163,30 @@ class DialogAreaDetail extends LitElement {
     this._name = ev.target.value;
   }
 
-  private _pictureChanged(ev: PolymerChangedEvent<string | null>) {
+  private _iconChanged(ev) {
+    this._error = undefined;
+    this._icon = ev.detail.value;
+  }
+
+  private _pictureChanged(ev: ValueChangedEvent<string | null>) {
     this._error = undefined;
     this._picture = (ev.target as HaPictureUpload).value;
   }
 
   private async _updateEntry() {
+    const create = !this._params!.entry;
     this._submitting = true;
     try {
       const values: AreaRegistryEntryMutableParams = {
         name: this._name.trim(),
-        picture: this._picture,
+        picture: this._picture || (create ? undefined : null),
+        icon: this._icon || (create ? undefined : null),
+        aliases: this._aliases,
       };
-      if (this._params!.entry) {
-        await this._params!.updateEntry!(values);
-      } else {
+      if (create) {
         await this._params!.createEntry!(values);
+      } else {
+        await this._params!.updateEntry!(values);
       }
       this.closeDialog();
     } catch (err: any) {
@@ -163,22 +198,17 @@ class DialogAreaDetail extends LitElement {
     }
   }
 
-  private async _deleteEntry() {
-    this._submitting = true;
-    try {
-      if (await this._params!.removeEntry!()) {
-        this.closeDialog();
-      }
-    } finally {
-      this._submitting = false;
-    }
+  private _aliasesChanged(ev: CustomEvent): void {
+    this._aliases = ev.detail.value;
   }
 
   static get styles(): CSSResultGroup {
     return [
       haStyleDialog,
       css`
-        ha-textfield {
+        ha-textfield,
+        ha-icon-picker,
+        ha-picture-upload {
           display: block;
           margin-bottom: 16px;
         }

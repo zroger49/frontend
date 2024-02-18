@@ -1,5 +1,5 @@
 import "@material/mwc-button/mwc-button";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import memoizeOne from "memoize-one";
 import { fireEvent } from "../../../../common/dom/fire_event";
@@ -12,7 +12,7 @@ import {
   LovelaceDashboard,
   LovelaceDashboardCreateParams,
   LovelaceDashboardMutableParams,
-} from "../../../../data/lovelace";
+} from "../../../../data/lovelace/dashboard";
 import { DEFAULT_PANEL, setDefaultPanel } from "../../../../data/panel";
 import { haStyleDialog } from "../../../../resources/styles";
 import { HomeAssistant } from "../../../../types";
@@ -55,9 +55,9 @@ export class DialogLovelaceDashboardDetail extends LitElement {
     fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._params || !this._data) {
-      return html``;
+      return nothing;
     }
     const defaultPanelUrlPath = this.hass.defaultPanel;
     const titleInvalid = !this._data.title || !this._data.title.trim();
@@ -86,19 +86,19 @@ export class DialogLovelaceDashboardDetail extends LitElement {
                 "ui.panel.config.lovelace.dashboards.cant_edit_yaml"
               )
             : this._params.urlPath === "lovelace"
-            ? this.hass.localize(
-                "ui.panel.config.lovelace.dashboards.cant_edit_default"
-              )
-            : html`
-                <ha-form
-                  .schema=${this._schema(this._params, this.hass.userData)}
-                  .data=${this._data}
-                  .hass=${this.hass}
-                  .error=${this._error}
-                  .computeLabel=${this._computeLabel}
-                  @value-changed=${this._valueChanged}
-                ></ha-form>
-              `}
+              ? this.hass.localize(
+                  "ui.panel.config.lovelace.dashboards.cant_edit_default"
+                )
+              : html`
+                  <ha-form
+                    .schema=${this._schema(this._params, this.hass.userData)}
+                    .data=${this._data}
+                    .hass=${this.hass}
+                    .error=${this._error}
+                    .computeLabel=${this._computeLabel}
+                    @value-changed=${this._valueChanged}
+                  ></ha-form>
+                `}
         </div>
         ${this._params.urlPath
           ? html`
@@ -169,7 +169,7 @@ export class DialogLovelaceDashboardDetail extends LitElement {
         },
         {
           name: "icon",
-          required: true,
+          required: false,
           selector: {
             icon: {},
           },
@@ -208,8 +208,8 @@ export class DialogLovelaceDashboardDetail extends LitElement {
         entry.name === "show_in_sidebar"
           ? "show_sidebar"
           : entry.name === "url_path"
-          ? "url"
-          : entry.name
+            ? "url"
+            : entry.name
       }`
     );
 
@@ -248,7 +248,7 @@ export class DialogLovelaceDashboardDetail extends LitElement {
       ...this._data,
       url_path: slugifyTitle.includes("-")
         ? slugifyTitle
-        : `lovelace-${slugifyTitle}`,
+        : `dashboard-${slugifyTitle}`,
     };
   }
 

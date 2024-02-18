@@ -19,7 +19,7 @@ class HaUserPicker extends LitElement {
 
   @property() public value = "";
 
-  @property() public users?: User[];
+  @property({ attribute: false }) public users?: User[];
 
   @property({ type: Boolean }) public disabled = false;
 
@@ -30,7 +30,9 @@ class HaUserPicker extends LitElement {
 
     return users
       .filter((user) => !user.system_generated)
-      .sort((a, b) => stringCompare(a.name, b.name));
+      .sort((a, b) =>
+        stringCompare(a.name, b.name, this.hass!.locale.language)
+      );
   });
 
   protected render(): TemplateResult {

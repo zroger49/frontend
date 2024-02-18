@@ -4,7 +4,7 @@ import {
   html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  nothing,
 } from "lit";
 import { customElement, property } from "lit/decorators";
 
@@ -12,10 +12,10 @@ import { customElement, property } from "lit/decorators";
 class HuiMarquee extends LitElement {
   @property() public text?: string;
 
-  @property({ type: Boolean }) public active?: boolean;
+  @property({ type: Boolean }) public active = false;
 
-  @property({ reflect: true, type: Boolean, attribute: "animating" })
-  private _animating = false;
+  // @todo Consider reworking to eliminate need for attribute since it is manipulated internally
+  @property({ reflect: true, type: Boolean }) public animating = false;
 
   protected firstUpdated(changedProps) {
     super.firstUpdated(changedProps);
@@ -33,8 +33,8 @@ class HuiMarquee extends LitElement {
   protected updated(changedProperties: PropertyValues): void {
     super.updated(changedProperties);
 
-    if (changedProperties.has("text") && this._animating) {
-      this._animating = false;
+    if (changedProperties.has("text") && this.animating) {
+      this.animating = false;
     }
 
     if (
@@ -42,26 +42,26 @@ class HuiMarquee extends LitElement {
       this.active &&
       this.offsetWidth < this.scrollWidth
     ) {
-      this._animating = true;
+      this.animating = true;
     }
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.text) {
-      return html``;
+      return nothing;
     }
 
     return html`
       <div class="marquee-inner" @animationiteration=${this._onIteration}>
         <span>${this.text}</span>
-        ${this._animating ? html` <span>${this.text}</span> ` : ""}
+        ${this.animating ? html` <span>${this.text}</span> ` : ""}
       </div>
     `;
   }
 
   private _onIteration() {
     if (!this.active) {
-      this._animating = false;
+      this.animating = false;
     }
   }
 
@@ -96,6 +96,8 @@ class HuiMarquee extends LitElement {
 
       :host([animating]) .marquee-inner span {
         padding-right: 16px;
+        padding-inline-end: 16px;
+        padding-inline-start: initial;
       }
 
       @keyframes marquee {

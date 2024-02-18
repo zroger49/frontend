@@ -1,11 +1,9 @@
-import "@polymer/paper-tooltip/paper-tooltip";
 import "@material/mwc-button/mwc-button";
 import { mdiDelete, mdiDeleteOff } from "@mdi/js";
-import "@polymer/paper-input/paper-input";
-import type { PaperInputElement } from "@polymer/paper-input/paper-input";
 import "@polymer/paper-item/paper-item";
 import "@polymer/paper-item/paper-item-body";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import "@lrnwebcomponents/simple-tooltip/simple-tooltip";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators";
 import memoizeOne from "memoize-one";
 import { fireEvent } from "../../../../src/common/dom/fire_event";
@@ -19,20 +17,22 @@ import {
   HassioAddonRepository,
 } from "../../../../src/data/hassio/addon";
 import { extractApiErrorMessage } from "../../../../src/data/hassio/common";
-import { haStyle, haStyleDialog } from "../../../../src/resources/styles";
-import type { HomeAssistant } from "../../../../src/types";
-import { HassioRepositoryDialogParams } from "./show-dialog-repositories";
 import {
   addStoreRepository,
   fetchStoreRepositories,
   removeStoreRepository,
 } from "../../../../src/data/supervisor/store";
+import { haStyle, haStyleDialog } from "../../../../src/resources/styles";
+import type { HomeAssistant } from "../../../../src/types";
+import { HassioRepositoryDialogParams } from "./show-dialog-repositories";
+import type { HaTextField } from "../../../../src/components/ha-textfield";
+import "../../../../src/components/ha-textfield";
 
 @customElement("dialog-hassio-repositories")
 class HassioRepositoriesDialog extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @query("#repository_input", true) private _optionInput?: PaperInputElement;
+  @query("#repository_input", true) private _optionInput?: HaTextField;
 
   @state() private _repositories?: HassioAddonRepository[];
 
@@ -68,7 +68,9 @@ class HassioRepositoriesDialog extends LitElement {
           repo.slug !== "a0d7b954" && // Home Assistant Community Add-ons
           repo.slug !== "5c53de3b" // The ESPHome repository
       )
-      .sort((a, b) => caseInsensitiveStringCompare(a.name, b.name))
+      .sort((a, b) =>
+        caseInsensitiveStringCompare(a.name, b.name, this.hass.locale.language)
+      )
   );
 
   private _filteredUsedRepositories = memoizeOne(
@@ -80,9 +82,9 @@ class HassioRepositoriesDialog extends LitElement {
         .map((repo) => repo.slug)
   );
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._dialogParams?.supervisor || this._repositories === undefined) {
-      return html``;
+      return nothing;
     }
     const repositories = this._filteredRepositories(this._repositories);
     const usedRepositories = this._filteredUsedRepositories(
@@ -126,7 +128,7 @@ class HassioRepositoriesDialog extends LitElement {
                         @click=${this._removeRepository}
                       >
                       </ha-icon-button>
-                      <paper-tooltip
+                      <simple-tooltip
                         animation-delay="0"
                         position="bottom"
                         offset="1"
@@ -136,14 +138,14 @@ class HassioRepositoriesDialog extends LitElement {
                             ? "dialog.repositories.used"
                             : "dialog.repositories.remove"
                         )}
-                      </paper-tooltip>
+                      </simple-tooltip>
                     </div>
                   </paper-item>
                 `
               )
             : html`<paper-item> No repositories </paper-item>`}
           <div class="layout horizontal bottom">
-            <paper-input
+            <ha-textfield
               class="flex-auto"
               id="repository_input"
               .value=${this._dialogParams!.url || ""}
@@ -152,11 +154,11 @@ class HassioRepositoriesDialog extends LitElement {
               )}
               @keydown=${this._handleKeyAdd}
               dialogInitialFocus
-            ></paper-input>
+            ></ha-textfield>
             <mwc-button @click=${this._addRepository}>
               ${this._processing
                 ? html`<ha-circular-progress
-                    active
+                    indeterminate
                     size="small"
                   ></ha-circular-progress>`
                 : this._dialogParams!.supervisor.localize(
@@ -193,6 +195,8 @@ class HassioRepositoriesDialog extends LitElement {
         }
         mwc-button {
           margin-left: 8px;
+          margin-inline-start: 8px;
+          margin-inline-end: initial;
         }
         ha-circular-progress {
           display: block;
@@ -216,7 +220,7 @@ class HassioRepositoriesDialog extends LitElement {
 
   private _handleKeyAdd(ev: KeyboardEvent) {
     ev.stopPropagation();
-    if (ev.keyCode !== 13) {
+    if (ev.key !== "Enter") {
       return;
     }
     this._addRepository();

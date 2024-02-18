@@ -1,5 +1,5 @@
 import "@material/mwc-button/mwc-button";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 import "../../../components/ha-card";
 import { HomeAssistant } from "../../../types";
@@ -18,9 +18,9 @@ export class HuiEmptyStateCard extends LitElement implements LovelaceCard {
     // eslint-disable-next-line
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.hass) {
-      return html``;
+      return nothing;
     }
 
     return html`
@@ -35,7 +35,7 @@ export class HuiEmptyStateCard extends LitElement implements LovelaceCard {
           )}
         </div>
         <div class="card-actions">
-          <a href="/config/integrations">
+          <a href="/config/integrations/dashboard">
             <mwc-button>
               ${this.hass.localize(
                 "ui.panel.lovelace.cards.empty_state.go_to_integrations_page"
@@ -60,6 +60,8 @@ export class HuiEmptyStateCard extends LitElement implements LovelaceCard {
 
       mwc-button {
         margin-left: -8px;
+        margin-inline-start: -8px;
+        margin-inline-end: initial;
       }
     `;
   }

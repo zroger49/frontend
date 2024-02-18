@@ -4,16 +4,16 @@ import { CSSResultGroup, html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators";
 import "../components/entity/ha-entity-toggle";
 import "../components/entity/state-info";
-import { UNAVAILABLE_STATES } from "../data/entity";
+import { isUnavailableState } from "../data/entity";
 import { canRun, ScriptEntity } from "../data/script";
 import { haStyle } from "../resources/styles";
 import { HomeAssistant } from "../types";
 
 @customElement("state-card-script")
-export class StateCardScript extends LitElement {
+class StateCardScript extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public stateObj!: HassEntity;
+  @property({ attribute: false }) public stateObj!: HassEntity;
 
   @property({ type: Boolean }) public inDialog = false;
 
@@ -30,18 +30,16 @@ export class StateCardScript extends LitElement {
           ? html`<mwc-button @click=${this._cancelScript}>
               ${stateObj.attributes.mode !== "single" &&
               (stateObj.attributes.current || 0) > 0
-                ? this.hass.localize(
-                    "ui.card.script.cancel_multiple",
-                    "number",
-                    stateObj.attributes.current
-                  )
+                ? this.hass.localize("ui.card.script.cancel_multiple", {
+                    number: stateObj.attributes.current,
+                  })
                 : this.hass.localize("ui.card.script.cancel")}
             </mwc-button>`
           : ""}
         ${stateObj.state === "off" || stateObj.attributes.max
           ? html`<mwc-button
               @click=${this._runScript}
-              .disabled=${UNAVAILABLE_STATES.includes(stateObj.state) ||
+              .disabled=${isUnavailableState(stateObj.state) ||
               !canRun(stateObj)}
             >
               ${this.hass!.localize("ui.card.script.run")}
@@ -69,5 +67,11 @@ export class StateCardScript extends LitElement {
 
   static get styles(): CSSResultGroup {
     return haStyle;
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "state-card-script": StateCardScript;
   }
 }

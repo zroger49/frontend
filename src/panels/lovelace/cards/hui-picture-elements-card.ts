@@ -4,11 +4,12 @@ import {
   html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  nothing,
 } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { applyThemesOnElement } from "../../../common/dom/apply_themes_on_element";
 import "../../../components/ha-card";
+import { ImageEntity, computeImageUrl } from "../../../data/image";
 import { HomeAssistant } from "../../../types";
 import { findEntities } from "../common/find-entities";
 import { LovelaceElement, LovelaceElementConfig } from "../elements/types";
@@ -62,7 +63,12 @@ class HuiPictureElementsCard extends LitElement implements LovelaceCard {
     if (!config) {
       throw new Error("Invalid configuration");
     } else if (
-      !(config.image || config.camera_image || config.state_image) ||
+      !(
+        config.image ||
+        config.image_entity ||
+        config.camera_image ||
+        config.state_image
+      ) ||
       (config.state_image && !config.entity)
     ) {
       throw new Error("Image required");
@@ -72,15 +78,10 @@ class HuiPictureElementsCard extends LitElement implements LovelaceCard {
 
     this._config = config;
 
-    this._elements = this._config.elements.map(
-      (elementConfig: LovelaceElementConfig) => {
-        const element = createStyledHuiElement(elementConfig);
-        if (this.hass) {
-          element.hass = this.hass;
-        }
-        return element as LovelaceElement;
-      }
-    );
+    this._elements = config.elements.map((element) => {
+      const cardElement = this._createElement(element);
+      return cardElement;
+    });
   }
 
   protected updated(changedProps: PropertyValues): void {
@@ -110,9 +111,14 @@ class HuiPictureElementsCard extends LitElement implements LovelaceCard {
     }
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.hass || !this._config) {
-      return html``;
+      return nothing;
+    }
+
+    let stateObj: ImageEntity | undefined;
+    if (this._config.image_entity) {
+      stateObj = this.hass.states[this._config.image_entity] as ImageEntity;
     }
 
     return html`
@@ -120,7 +126,7 @@ class HuiPictureElementsCard extends LitElement implements LovelaceCard {
         <div id="root">
           <hui-image
             .hass=${this.hass}
-            .image=${this._config.image}
+            .image=${stateObj ? computeImageUrl(stateObj) : this._config.image}
             .stateImage=${this._config.state_image}
             .stateFilter=${this._config.state_filter}
             .cameraImage=${this._config.camera_image}
@@ -153,6 +159,37 @@ class HuiPictureElementsCard extends LitElement implements LovelaceCard {
         box-sizing: border-box;
       }
     `;
+  }
+
+  private _createElement(
+    elementConfig: LovelaceElementConfig
+  ): LovelaceElement {
+    const element = createStyledHuiElement(elementConfig) as LovelaceCard;
+    if (this.hass) {
+      element.hass = this.hass;
+    }
+    element.addEventListener(
+      "ll-rebuild",
+      (ev) => {
+        ev.stopPropagation();
+        this._rebuildElement(element, elementConfig);
+      },
+      { once: true }
+    );
+    return element;
+  }
+
+  private _rebuildElement(
+    elToReplace: LovelaceElement,
+    config: LovelaceElementConfig
+  ): void {
+    const newCardEl = this._createElement(config);
+    if (elToReplace.parentElement) {
+      elToReplace.parentElement.replaceChild(newCardEl, elToReplace);
+    }
+    this._elements = this._elements!.map((curCardEl) =>
+      curCardEl === elToReplace ? newCardEl : curCardEl
+    );
   }
 }
 

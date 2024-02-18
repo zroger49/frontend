@@ -2,7 +2,7 @@ import { HassEntity } from "home-assistant-js-websocket";
 import { computeStateDomain } from "./compute_state_domain";
 import { UNAVAILABLE_STATES } from "../../data/entity";
 
-const FIXED_DOMAIN_STATES = {
+export const FIXED_DOMAIN_STATES = {
   alarm_control_panel: [
     "armed_away",
     "armed_custom_bypass",
@@ -26,10 +26,20 @@ const FIXED_DOMAIN_STATES = {
   humidifier: ["on", "off"],
   input_boolean: ["on", "off"],
   input_button: [],
+  lawn_mower: ["error", "paused", "mowing", "docked"],
   light: ["on", "off"],
   lock: ["jammed", "locked", "locking", "unlocked", "unlocking"],
-  media_player: ["idle", "off", "paused", "playing", "standby"],
+  media_player: [
+    "off",
+    "on",
+    "idle",
+    "playing",
+    "paused",
+    "standby",
+    "buffering",
+  ],
   person: ["home", "not_home"],
+  plant: ["ok", "problem"],
   remote: ["on", "off"],
   scene: [],
   schedule: ["on", "off"],
@@ -40,6 +50,7 @@ const FIXED_DOMAIN_STATES = {
   timer: ["active", "idle", "paused"],
   update: ["on", "off"],
   vacuum: ["cleaning", "docked", "error", "idle", "paused", "returning"],
+  valve: ["closed", "closing", "open", "opening"],
   weather: [
     "clear-night",
     "cloudy",
@@ -57,7 +68,7 @@ const FIXED_DOMAIN_STATES = {
     "windy-variant",
     "windy",
   ],
-};
+} as const;
 
 const FIXED_DOMAIN_ATTRIBUTE_STATES = {
   alarm_control_panel: {
@@ -102,7 +113,15 @@ const FIXED_DOMAIN_ATTRIBUTE_STATES = {
     frontend_stream_type: ["hls", "web_rtc"],
   },
   climate: {
-    hvac_action: ["off", "idle", "heating", "cooling", "drying", "fan"],
+    hvac_action: [
+      "off",
+      "idle",
+      "preheating",
+      "heating",
+      "cooling",
+      "drying",
+      "fan",
+    ],
   },
   cover: {
     device_class: [
@@ -118,24 +137,41 @@ const FIXED_DOMAIN_ATTRIBUTE_STATES = {
       "window",
     ],
   },
+  device_tracker: {
+    source_type: ["bluetooth", "bluetooth_le", "gps", "router"],
+  },
+  fan: {
+    direction: ["forward", "reverse"],
+  },
   humidifier: {
     device_class: ["humidifier", "dehumidifier"],
+    action: ["off", "idle", "humidifying", "drying"],
   },
   media_player: {
     device_class: ["tv", "speaker", "receiver"],
     media_content_type: [
+      "album",
       "app",
+      "artist",
       "channel",
+      "channels",
+      "composer",
+      "contibuting_artist",
       "episode",
       "game",
+      "genre",
       "image",
       "movie",
       "music",
       "playlist",
+      "podcast",
+      "season",
+      "track",
       "tvshow",
       "url",
       "video",
     ],
+    repeat: ["off", "one", "all"],
   },
   number: {
     device_class: ["temperature"],
@@ -160,6 +196,7 @@ const FIXED_DOMAIN_ATTRIBUTE_STATES = {
       "nitrogen_monoxide",
       "nitrous_oxide",
       "ozone",
+      "ph",
       "pm1",
       "pm10",
       "pm25",
@@ -172,7 +209,9 @@ const FIXED_DOMAIN_ATTRIBUTE_STATES = {
       "temperature",
       "timestamp",
       "volatile_organic_compounds",
+      "volatile_organic_compounds_parts",
       "voltage",
+      "volume_flow_rate",
     ],
     state_class: ["measurement", "total", "total_increasing"],
   },
@@ -223,6 +262,11 @@ export const getStates = (
         result.push("home", "not_home");
       }
       break;
+    case "event":
+      if (attribute === "event_type") {
+        result.push(...state.attributes.event_types);
+      }
+      break;
     case "fan":
       if (attribute === "preset_mode") {
         result.push(...state.attributes.preset_modes);
@@ -259,6 +303,11 @@ export const getStates = (
     case "remote":
       if (attribute === "current_activity") {
         result.push(...state.attributes.activity_list);
+      }
+      break;
+    case "sensor":
+      if (!attribute && state.attributes.device_class === "enum") {
+        result.push(...state.attributes.options);
       }
       break;
     case "vacuum":

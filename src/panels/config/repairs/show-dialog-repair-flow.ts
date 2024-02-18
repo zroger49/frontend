@@ -27,11 +27,13 @@ export const showRepairsFlowDialog = (
       dialogClosedCallback,
     },
     {
+      flowType: "repair_flow",
       loadDevicesAndAreas: false,
       createFlow: async (hass, handler) => {
         const [step] = await Promise.all([
           createRepairsFlow(hass, handler, issue.issue_id),
           hass.loadBackendTranslation("issues", issue.domain),
+          hass.loadBackendTranslation("selector", issue.domain),
         ]);
         return step;
       },
@@ -39,6 +41,7 @@ export const showRepairsFlowDialog = (
         const [step] = await Promise.all([
           fetchRepairsFlow(hass, flowId),
           hass.loadBackendTranslation("issues", issue.domain),
+          hass.loadBackendTranslation("selector", issue.domain),
         ]);
         return step;
       },
@@ -47,7 +50,9 @@ export const showRepairsFlowDialog = (
 
       renderAbortDescription(hass, step) {
         const description = hass.localize(
-          `component.${issue.domain}.issues.abort.${step.reason}`,
+          `component.${issue.domain}.issues.${
+            issue.translation_key || issue.issue_id
+          }.fix_flow.abort.${step.reason}`,
           step.description_placeholders
         );
 
@@ -95,7 +100,8 @@ export const showRepairsFlowDialog = (
         return hass.localize(
           `component.${issue.domain}.issues.${
             issue.translation_key || issue.issue_id
-          }.fix_flow.step.${step.step_id}.data.${field.name}`
+          }.fix_flow.step.${step.step_id}.data.${field.name}`,
+          step.description_placeholders
         );
       },
 
@@ -120,6 +126,25 @@ export const showRepairsFlowDialog = (
         );
       },
 
+      renderShowFormStepFieldLocalizeValue(hass, _step, key) {
+        return hass.localize(`component.${issue.domain}.selector.${key}`);
+      },
+
+      renderShowFormStepSubmitButton(hass, step) {
+        return (
+          hass.localize(
+            `component.${issue.domain}.issues.${
+              issue.translation_key || issue.issue_id
+            }.fix_flow.step.${step.step_id}.submit`
+          ) ||
+          hass.localize(
+            `ui.panel.config.integrations.config_flow.${
+              step.last_step === false ? "next" : "submit"
+            }`
+          )
+        );
+      },
+
       renderExternalStepHeader(_hass, _step) {
         return "";
       },
@@ -139,7 +164,8 @@ export const showRepairsFlowDialog = (
           hass.localize(
             `component.${issue.domain}.issues.step.${
               issue.translation_key || issue.issue_id
-            }.fix_flow.${step.step_id}.title`
+            }.fix_flow.${step.step_id}.title`,
+            step.description_placeholders
           ) || hass.localize(`component.${issue.domain}.title`)
         );
       },
@@ -167,7 +193,8 @@ export const showRepairsFlowDialog = (
           hass.localize(
             `component.${issue.domain}.issues.${
               issue.translation_key || issue.issue_id
-            }.fix_flow.step.${step.step_id}.title`
+            }.fix_flow.step.${step.step_id}.title`,
+            step.description_placeholders
           ) || hass.localize(`component.${issue.domain}.title`)
         );
       },
@@ -194,7 +221,7 @@ export const showRepairsFlowDialog = (
         return hass.localize(
           `component.${issue.domain}.issues.${
             issue.translation_key || issue.issue_id
-          }.fix_flow.step.${step.step_id}.menu_issues.${option}`,
+          }.fix_flow.step.${step.step_id}.menu_options.${option}`,
           step.description_placeholders
         );
       },

@@ -1,16 +1,15 @@
 import "@material/mwc-list/mwc-list-item";
-import { html, LitElement, TemplateResult } from "lit";
 import { ComboBoxLitRenderer } from "@vaadin/combo-box/lit";
+import { html, LitElement, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators";
 import { fireEvent } from "../common/dom/fire_event";
-import { PolymerChangedEvent } from "../polymer-types";
-import { HomeAssistant } from "../types";
-import type { HaComboBox } from "./ha-combo-box";
+import { caseInsensitiveStringCompare } from "../common/string/compare";
 import { ConfigEntry, getConfigEntries } from "../data/config_entries";
 import { domainToName } from "../data/integration";
-import { caseInsensitiveStringCompare } from "../common/string/compare";
+import { ValueChangedEvent, HomeAssistant } from "../types";
 import { brandsUrl } from "../util/brands-url";
 import "./ha-combo-box";
+import type { HaComboBox } from "./ha-combo-box";
 
 export interface ConfigEntryExtended extends ConfigEntry {
   localized_domain_name?: string;
@@ -48,32 +47,33 @@ class HaConfigEntryPicker extends LitElement {
     this._getConfigEntries();
   }
 
-  private _rowRenderer: ComboBoxLitRenderer<ConfigEntryExtended> = (
-    item
-  ) => html`<mwc-list-item twoline graphic="icon">
-    <span
-      >${item.title ||
-      this.hass.localize(
-        "ui.panel.config.integrations.config_entry.unnamed_entry"
-      )}</span
-    >
-    <span slot="secondary">${item.localized_domain_name}</span>
-    <img
-      slot="graphic"
-      src=${brandsUrl({
-        domain: item.domain,
-        type: "icon",
-        darkOptimized: this.hass.themes?.darkMode,
-      })}
-      referrerpolicy="no-referrer"
-      @error=${this._onImageError}
-      @load=${this._onImageLoad}
-    />
-  </mwc-list-item>`;
+  private _rowRenderer: ComboBoxLitRenderer<ConfigEntryExtended> = (item) =>
+    html`<mwc-list-item twoline graphic="icon">
+      <span
+        >${item.title ||
+        this.hass.localize(
+          "ui.panel.config.integrations.config_entry.unnamed_entry"
+        )}</span
+      >
+      <span slot="secondary">${item.localized_domain_name}</span>
+      <img
+        alt=""
+        slot="graphic"
+        src=${brandsUrl({
+          domain: item.domain,
+          type: "icon",
+          darkOptimized: this.hass.themes?.darkMode,
+        })}
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"
+        @error=${this._onImageError}
+        @load=${this._onImageLoad}
+      />
+    </mwc-list-item>`;
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._configEntries) {
-      return html``;
+      return nothing;
     }
     return html`
       <ha-combo-box
@@ -121,7 +121,8 @@ class HaConfigEntryPicker extends LitElement {
         .sort((conf1, conf2) =>
           caseInsensitiveStringCompare(
             conf1.localized_domain_name + conf1.title,
-            conf2.localized_domain_name + conf2.title
+            conf2.localized_domain_name + conf2.title,
+            this.hass.locale.language
           )
         );
     });
@@ -131,7 +132,7 @@ class HaConfigEntryPicker extends LitElement {
     return this.value || "";
   }
 
-  private _valueChanged(ev: PolymerChangedEvent<string>) {
+  private _valueChanged(ev: ValueChangedEvent<string>) {
     ev.stopPropagation();
     const newValue = ev.detail.value;
 

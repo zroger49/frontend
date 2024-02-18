@@ -4,7 +4,7 @@ import {
   html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  nothing,
 } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { DOMAINS_TOGGLE } from "../../../common/const";
@@ -18,7 +18,7 @@ import { turnOnOffEntities } from "../common/entity/turn-on-off-entities";
 class HuiEntitiesToggle extends LitElement {
   @property({ type: Array }) public entities?: string[];
 
-  @property({ attribute: false }) protected hass?: HomeAssistant;
+  @property({ attribute: false }) public hass?: HomeAssistant;
 
   @state() private _toggleEntities?: string[];
 
@@ -33,9 +33,9 @@ class HuiEntitiesToggle extends LitElement {
     }
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._toggleEntities?.length) {
-      return html``;
+      return nothing;
     }
 
     return html`

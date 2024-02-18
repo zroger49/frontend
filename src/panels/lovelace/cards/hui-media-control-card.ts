@@ -7,7 +7,7 @@ import {
   html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  nothing,
 } from "lit";
 import { customElement, property, query, state } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
@@ -17,12 +17,13 @@ import { fireEvent } from "../../../common/dom/fire_event";
 import { computeStateName } from "../../../common/entity/compute_state_name";
 import { supportsFeature } from "../../../common/entity/supports-feature";
 import { extractColors } from "../../../common/image/extract_color";
+import { stateActive } from "../../../common/entity/state_active";
 import { debounce } from "../../../common/util/debounce";
 import "../../../components/ha-card";
 import "../../../components/ha-icon-button";
 import "../../../components/ha-state-icon";
 import { showMediaBrowserDialog } from "../../../components/media-player/show-media-browser-dialog";
-import { UNAVAILABLE_STATES } from "../../../data/entity";
+import { isUnavailableState } from "../../../data/entity";
 import {
   cleanupMediaTitle,
   computeMediaControls,
@@ -31,15 +32,13 @@ import {
   handleMediaControlClick,
   MediaPickedEvent,
   MediaPlayerEntity,
+  MediaPlayerEntityFeature,
   mediaPlayerPlayMedia,
-  SUPPORT_BROWSE_MEDIA,
-  SUPPORT_SEEK,
-  SUPPORT_TURN_ON,
 } from "../../../data/media-player";
 import type { HomeAssistant } from "../../../types";
 import { findEntities } from "../common/find-entities";
 import { hasConfigOrEntityChanged } from "../common/has-changed";
-import { installResizeObserver } from "../common/install-resize-observer";
+import { loadPolyfillIfNeeded } from "../../../resources/resize-observer.polyfill";
 import "../components/hui-marquee";
 import { createEntityNotFoundWarning } from "../components/hui-warning";
 import type { LovelaceCard, LovelaceCardEditor } from "../types";
@@ -102,6 +101,8 @@ export class HuiMediaControlCard extends LitElement implements LovelaceCard {
     }
 
     this._config = config;
+
+    this.updateComplete.then(() => this._measureCard());
   }
 
   public connectedCallback(): void {
@@ -131,6 +132,7 @@ export class HuiMediaControlCard extends LitElement implements LovelaceCard {
   }
 
   public disconnectedCallback(): void {
+    super.disconnectedCallback();
     if (this._progressInterval) {
       clearInterval(this._progressInterval);
       this._progressInterval = undefined;
@@ -140,9 +142,9 @@ export class HuiMediaControlCard extends LitElement implements LovelaceCard {
     }
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.hass || !this._config) {
-      return html``;
+      return nothing;
     }
     const stateObj = this._stateObj;
 
@@ -171,10 +173,12 @@ export class HuiMediaControlCard extends LitElement implements LovelaceCard {
 
     const entityState = stateObj.state;
 
-    const isOffState = entityState === "off";
+    const isOffState =
+      !stateActive(stateObj) && !isUnavailableState(entityState);
     const isUnavailable =
-      UNAVAILABLE_STATES.includes(entityState) ||
-      (entityState === "off" && !supportsFeature(stateObj, SUPPORT_TURN_ON));
+      isUnavailableState(entityState) ||
+      (isOffState &&
+        !supportsFeature(stateObj, MediaPlayerEntityFeature.TURN_ON));
     const hasNoImage = !this._image;
     const controls = computeMediaControls(stateObj, false);
     const showControls =
@@ -230,7 +234,11 @@ export class HuiMediaControlCard extends LitElement implements LovelaceCard {
         >
           <div class="top-info">
             <div class="icon-name">
-              <ha-state-icon class="icon" .state=${stateObj}></ha-state-icon>
+              <ha-state-icon
+                class="icon"
+                .stateObj=${stateObj}
+                .hass=${this.hass}
+              ></ha-state-icon>
               <div>
                 ${this._config!.name ||
                 computeStateName(this.hass!.states[this._config!.entity])}
@@ -282,7 +290,10 @@ export class HuiMediaControlCard extends LitElement implements LovelaceCard {
                                 </ha-icon-button>
                               `
                             )}
-                            ${supportsFeature(stateObj, SUPPORT_BROWSE_MEDIA)
+                            ${supportsFeature(
+                              stateObj,
+                              MediaPlayerEntityFeature.BROWSE_MEDIA
+                            )
                               ? html`
                                   <ha-icon-button
                                     class="browse-media"
@@ -305,7 +316,10 @@ export class HuiMediaControlCard extends LitElement implements LovelaceCard {
                           style=${styleMap({
                             "--mdc-theme-primary":
                               this._foregroundColor || "var(--accent-color)",
-                            cursor: supportsFeature(stateObj, SUPPORT_SEEK)
+                            cursor: supportsFeature(
+                              stateObj,
+                              MediaPlayerEntityFeature.SEEK
+                            )
                               ? "pointer"
                               : "initial",
                           })}
@@ -322,19 +336,20 @@ export class HuiMediaControlCard extends LitElement implements LovelaceCard {
   }
 
   protected shouldUpdate(changedProps: PropertyValues): boolean {
-    return hasConfigOrEntityChanged(this, changedProps);
+    return (
+      hasConfigOrEntityChanged(this, changedProps) ||
+      changedProps.size > 1 ||
+      !changedProps.has("hass")
+    );
   }
 
   protected firstUpdated(): void {
     this._attachObserver();
+    this._measureCard();
   }
 
   public willUpdate(changedProps: PropertyValues): void {
     super.willUpdate(changedProps);
-
-    if (!this.hasUpdated) {
-      this._measureCard();
-    }
 
     if (
       !this._config ||
@@ -456,6 +471,7 @@ export class HuiMediaControlCard extends LitElement implements LovelaceCard {
 
   private _measureCard() {
     const card = this.shadowRoot!.querySelector("ha-card");
+
     if (!card) {
       return;
     }
@@ -466,7 +482,7 @@ export class HuiMediaControlCard extends LitElement implements LovelaceCard {
 
   private async _attachObserver(): Promise<void> {
     if (!this._resizeObserver) {
-      await installResizeObserver();
+      await loadPolyfillIfNeeded();
       this._resizeObserver = new ResizeObserver(
         debounce(() => this._measureCard(), 250, false)
       );
@@ -522,7 +538,7 @@ export class HuiMediaControlCard extends LitElement implements LovelaceCard {
   private _handleSeek(e: MouseEvent): void {
     const stateObj = this._stateObj!;
 
-    if (!supportsFeature(stateObj, SUPPORT_SEEK)) {
+    if (!supportsFeature(stateObj, MediaPlayerEntityFeature.SEEK)) {
       return;
     }
 
@@ -602,7 +618,9 @@ export class HuiMediaControlCard extends LitElement implements LovelaceCard {
         right: 0;
 
         opacity: 1;
-        transition: width 0.8s, opacity 0.8s linear 0.8s;
+        transition:
+          width 0.8s,
+          opacity 0.8s linear 0.8s;
       }
 
       .image {
@@ -614,8 +632,12 @@ export class HuiMediaControlCard extends LitElement implements LovelaceCard {
         right: 0;
         height: 100%;
         opacity: 1;
-        transition: width 0.8s, background-image 0.8s, background-color 0.8s,
-          background-size 0.8s, opacity 0.8s linear 0.8s;
+        transition:
+          width 0.8s,
+          background-image 0.8s,
+          background-color 0.8s,
+          background-size 0.8s,
+          opacity 0.8s linear 0.8s;
       }
 
       .no-image .image {
@@ -633,13 +655,17 @@ export class HuiMediaControlCard extends LitElement implements LovelaceCard {
         height: 100%;
         background-image: url("/static/images/card_media_player_bg.png");
         width: 50%;
-        transition: opacity 0.8s, background-color 0.8s;
+        transition:
+          opacity 0.8s,
+          background-color 0.8s;
       }
 
       .off .image,
       .off .color-gradient {
         opacity: 0;
-        transition: opacity 0s, width 0.8s;
+        transition:
+          opacity 0s,
+          width 0.8s;
         width: 0;
       }
 

@@ -1,23 +1,23 @@
 import { mdiClose } from "@mdi/js";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 import { fireEvent } from "../../../common/dom/fire_event";
 import "../../../components/ha-icon-button";
+import "../../../components/ha-textfield";
 import { HomeAssistant } from "../../../types";
 import { EditorTarget } from "../editor/types";
-import "../../../components/ha-textfield";
 
 @customElement("hui-input-list-editor")
 export class HuiInputListEditor extends LitElement {
-  @property() protected value?: string[];
+  @property({ type: Array }) public value?: string[];
 
-  @property() protected hass?: HomeAssistant;
+  @property({ attribute: false }) public hass?: HomeAssistant;
 
-  @property() protected inputLabel?: string;
+  @property() public inputLabel?: string;
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.value) {
-      return html``;
+      return nothing;
     }
 
     return html`
@@ -105,6 +105,8 @@ export class HuiInputListEditor extends LitElement {
     return css`
       ha-icon-button {
         margin-right: -24px;
+        margin-inline-end: -24px;
+        margin-inline-start: initial;
         color: var(--secondary-text-color);
       }
       ha-textfield {

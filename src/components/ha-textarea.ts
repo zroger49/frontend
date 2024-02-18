@@ -47,6 +47,11 @@ export class HaTextArea extends TextAreaBase {
         margin-top: 16px;
         margin-bottom: 16px;
       }
+      .mdc-floating-label {
+        inset-inline-start: 16px !important;
+        inset-inline-end: initial !important;
+        transform-origin: var(--float-start) top;
+      }
     `,
   ];
 }

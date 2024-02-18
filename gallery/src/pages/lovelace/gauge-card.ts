@@ -3,6 +3,7 @@ import { customElement, query } from "lit/decorators";
 import { getEntity } from "../../../../src/fake_data/entity";
 import { provideHass } from "../../../../src/fake_data/provide_hass";
 import "../../components/demo-cards";
+import { mockIcons } from "../../../../demo/src/stubs/icons";
 
 const ENTITIES = [
   getEntity("sensor", "brightness", "12", {}),
@@ -23,13 +24,12 @@ const CONFIGS = [
     heading: "Basic example",
     config: `
 - type: gauge
-  title: Humidity
   entity: sensor.outside_humidity
   name: Outside Humidity
     `,
   },
   {
-    heading: "Custom Unit of Measurement",
+    heading: "Custom unit of measurement",
     config: `
 - type: gauge
   entity: sensor.outside_temperature
@@ -38,7 +38,16 @@ const CONFIGS = [
     `,
   },
   {
-    heading: "Setting Severity Levels",
+    heading: "Rendering needle",
+    config: `
+- type: gauge
+  entity: sensor.outside_humidity
+  name: Outside Humidity
+  needle: true
+    `,
+  },
+  {
+    heading: "Setting severity levels",
     config: `
 - type: gauge
   entity: sensor.brightness
@@ -50,7 +59,7 @@ const CONFIGS = [
     `,
   },
   {
-    heading: "Setting Severity Levels",
+    heading: "Setting severity levels",
     config: `
 - type: gauge
   entity: sensor.brightness_medium
@@ -62,7 +71,7 @@ const CONFIGS = [
     `,
   },
   {
-    heading: "Setting Severity Levels",
+    heading: "Setting severity levels",
     config: `
 - type: gauge
   entity: sensor.brightness_high
@@ -74,7 +83,7 @@ const CONFIGS = [
     `,
   },
   {
-    heading: "Setting Min (0) and Max (15) Values",
+    heading: "Setting min (0) and mx (15) values",
     config: `
 - type: gauge
   entity: sensor.brightness
@@ -84,14 +93,14 @@ const CONFIGS = [
     `,
   },
   {
-    heading: "Invalid Entity",
+    heading: "Invalid entity",
     config: `
 - type: gauge
   entity: sensor.invalid_entity
     `,
   },
   {
-    heading: "Non-Numeric Value",
+    heading: "Non-numeric value",
     config: `
 - type: gauge
   entity: plant.bonsai
@@ -120,6 +129,7 @@ class DemoGaugeEntity extends LitElement {
     hass.updateTranslations(null, "en");
     hass.updateTranslations("lovelace", "en");
     hass.addEntities(ENTITIES);
+    mockIcons(hass);
   }
 }
 

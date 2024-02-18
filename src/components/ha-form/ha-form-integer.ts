@@ -12,14 +12,19 @@ import { HaCheckbox } from "../ha-checkbox";
 import "../ha-slider";
 import { HaTextField } from "../ha-textfield";
 import { HaFormElement, HaFormIntegerData, HaFormIntegerSchema } from "./types";
+import { LocalizeFunc } from "../../common/translations/localize";
 
 @customElement("ha-form-integer")
 export class HaFormInteger extends LitElement implements HaFormElement {
+  @property({ attribute: false }) public localize?: LocalizeFunc;
+
   @property({ attribute: false }) public schema!: HaFormIntegerSchema;
 
   @property({ attribute: false }) public data?: HaFormIntegerData;
 
   @property() public label?: string;
+
+  @property() public helper?: string;
 
   @property({ type: Boolean }) public disabled = false;
 
@@ -55,8 +60,7 @@ export class HaFormInteger extends LitElement implements HaFormElement {
                 `
               : ""}
             <ha-slider
-              pin
-              ignore-bar-touch
+              labeled
               .value=${this._value}
               .min=${this.schema.valueMin}
               .max=${this.schema.valueMax}
@@ -65,6 +69,9 @@ export class HaFormInteger extends LitElement implements HaFormElement {
               @change=${this._valueChanged}
             ></ha-slider>
           </div>
+          ${this.helper
+            ? html`<ha-input-helper-text>${this.helper}</ha-input-helper-text>`
+            : ""}
         </div>
       `;
     }
@@ -74,12 +81,16 @@ export class HaFormInteger extends LitElement implements HaFormElement {
         type="number"
         inputMode="numeric"
         .label=${this.label}
+        .helper=${this.helper}
+        helperPersistent
         .value=${this.data !== undefined ? this.data : ""}
         .disabled=${this.disabled}
         .required=${this.schema.required}
         .autoValidate=${this.schema.required}
         .suffix=${this.schema.description?.suffix}
-        .validationMessage=${this.schema.required ? "Required" : undefined}
+        .validationMessage=${this.schema.required
+          ? this.localize?.("ui.common.error_required")
+          : undefined}
         @input=${this._valueChanged}
       ></ha-textfield>
     `;

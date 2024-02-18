@@ -12,7 +12,7 @@ import { HomeAssistant } from "../../types";
 class FirstWeekdayRow extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public narrow!: boolean;
+  @property({ type: Boolean }) public narrow = false;
 
   protected render(): TemplateResult {
     return html`
@@ -30,8 +30,14 @@ class FirstWeekdayRow extends LitElement {
           .disabled=${this.hass.locale === undefined}
           .value=${this.hass.locale.first_weekday}
           @selected=${this._handleFormatSelection}
+          naturalMenuWidth
         >
-          ${Object.values(FirstWeekday).map((day) => {
+          ${[
+            FirstWeekday.language,
+            FirstWeekday.monday,
+            FirstWeekday.saturday,
+            FirstWeekday.sunday,
+          ].map((day) => {
             const value = this.hass.localize(
               `ui.panel.profile.first_weekday.values.${day}`
             );

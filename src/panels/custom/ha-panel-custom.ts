@@ -12,6 +12,9 @@ import {
 import { setCustomPanelProperties } from "../../util/custom-panel/set-custom-panel-properties";
 
 declare global {
+  interface HTMLElementTagNameMap {
+    "ha-panel-custom": HaPanelCustom;
+  }
   interface Window {
     customPanel: HaPanelCustom | undefined;
   }
@@ -20,11 +23,11 @@ declare global {
 export class HaPanelCustom extends ReactiveElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public narrow!: boolean;
+  @property({ type: Boolean }) public narrow = false;
 
-  @property() public route!: Route;
+  @property({ attribute: false }) public route!: Route;
 
-  @property() public panel!: CustomPanelInfo;
+  @property({ attribute: false }) public panel!: CustomPanelInfo;
 
   private _setProperties?: (props: Record<string, unknown>) => void | undefined;
 
@@ -99,10 +102,7 @@ export class HaPanelCustom extends ReactiveElement {
         !confirm(
           `${this.hass.localize(
             "ui.panel.custom.external_panel.question_trust",
-            "name",
-            config.name,
-            "link",
-            tempA.href
+            { name: config.name, link: tempA.href }
           )}
 
            ${this.hass.localize(
@@ -140,18 +140,18 @@ export class HaPanelCustom extends ReactiveElement {
     }
 
     window.customPanel = this;
+    const titleAttr = this.panel.title ? `title="${this.panel.title}"` : "";
     this.innerHTML = `
-    <style>
-      iframe {
-        border: 0;
-        width: 100%;
-        height: 100%;
-        display: block;
-        background-color: var(--primary-background-color);
-      }
-    </style>
-    <iframe></iframe>
-    `.trim();
+      <style>
+        iframe {
+          border: 0;
+          width: 100%;
+          height: 100%;
+          display: block;
+          background-color: var(--primary-background-color);
+        }
+      </style>
+      <iframe ${titleAttr}></iframe>`.trim();
     const iframeDoc = this.querySelector("iframe")!.contentWindow!.document;
     iframeDoc.open();
     iframeDoc.write(

@@ -1,4 +1,4 @@
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators";
 import { ifDefined } from "lit/directives/if-defined";
 import "../../../components/ha-icon";
@@ -23,9 +23,9 @@ class HuiWeblinkRow extends LitElement implements LovelaceRow {
     };
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._config) {
-      return html``;
+      return nothing;
     }
 
     return html`
@@ -58,6 +58,8 @@ class HuiWeblinkRow extends LitElement implements LovelaceRow {
         overflow: hidden;
         text-overflow: ellipsis;
         margin-left: 16px;
+        margin-inline-start: 16px;
+        margin-inline-end: initial;
       }
     `;
   }

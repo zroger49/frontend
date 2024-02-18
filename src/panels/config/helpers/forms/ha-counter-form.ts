@@ -1,10 +1,10 @@
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../../common/dom/fire_event";
 import "../../../../components/ha-icon-picker";
 import "../../../../components/ha-switch";
-import "../../../../components/ha-textfield";
 import type { HaSwitch } from "../../../../components/ha-switch";
+import "../../../../components/ha-textfield";
 import { Counter } from "../../../../data/counter";
 import { haStyle } from "../../../../resources/styles";
 import { HomeAssistant } from "../../../../types";
@@ -13,7 +13,7 @@ import { HomeAssistant } from "../../../../types";
 class HaCounterForm extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public new?: boolean;
+  @property({ type: Boolean }) public new = false;
 
   private _item?: Partial<Counter>;
 
@@ -60,11 +60,10 @@ class HaCounterForm extends LitElement {
     );
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.hass) {
-      return html``;
+      return nothing;
     }
-    const nameInvalid = !this._name || this._name.trim() === "";
 
     return html`
       <div class="form">
@@ -75,10 +74,11 @@ class HaCounterForm extends LitElement {
           .label=${this.hass!.localize(
             "ui.dialogs.helper_settings.generic.name"
           )}
-          .errorMessage=${this.hass!.localize(
+          autoValidate
+          required
+          .validationMessage=${this.hass!.localize(
             "ui.dialogs.helper_settings.required_error_msg"
           )}
-          .invalid=${nameInvalid}
           dialogInitialFocus
         ></ha-textfield>
         <ha-icon-picker
@@ -160,8 +160,8 @@ class HaCounterForm extends LitElement {
           ? Number(target.value)
           : undefined
         : target.localName === "ha-switch"
-        ? (ev.target as HaSwitch).checked
-        : ev.detail?.value || target.value;
+          ? (ev.target as HaSwitch).checked
+          : ev.detail?.value || target.value;
     if (this[`_${configValue}`] === value) {
       return;
     }
@@ -192,6 +192,8 @@ class HaCounterForm extends LitElement {
         }
         .row div {
           margin-left: 16px;
+          margin-inline-start: 16px;
+          margin-inline-end: initial;
         }
         ha-textfield {
           display: block;

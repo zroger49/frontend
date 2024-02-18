@@ -10,19 +10,23 @@ import "../../../../src/components/ha-card";
 
 @customElement("hc-layout")
 class HcLayout extends LitElement {
-  @property() public subtitle?: string | undefined;
+  @property() public subtitle?: string;
 
-  @property() public auth?: Auth;
+  @property({ attribute: false }) public auth?: Auth;
 
-  @property() public connection?: Connection;
+  @property({ attribute: false }) public connection?: Connection;
 
-  @property() public user?: HassUser;
+  @property({ attribute: false }) public user?: HassUser;
 
   protected render(): TemplateResult {
     return html`
       <ha-card>
         <div class="layout">
-          <img class="hero" src="/images/google-nest-hub.png" />
+          <img
+            class="hero"
+            alt="A Google Nest Hub with a Home Assistant dashboard on its screen"
+            src="/images/google-nest-hub.png"
+          />
           <h1 class="card-header">
             Home Assistant Cast${this.subtitle ? ` – ${this.subtitle}` : ""}
             ${this.auth
@@ -44,7 +48,7 @@ class HcLayout extends LitElement {
       <div class="footer">
         <a href="./faq.html">Frequently Asked Questions</a> – Found a bug?
         <a
-          href="https://github.com/home-assistant/home-assistant-polymer/issues"
+          href="https://github.com/home-assistant/frontend/issues"
           target="_blank"
           >Let us know!</a
         >

@@ -1,7 +1,7 @@
-import { html, TemplateResult } from "lit";
+import { html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { mockHistory } from "../../../../demo/src/stubs/history";
-import { LovelaceConfig } from "../../../../src/data/lovelace";
+import { LovelaceConfig } from "../../../../src/data/lovelace/config/types";
 import {
   MockHomeAssistant,
   provideHass,
@@ -18,9 +18,9 @@ class HcDemo extends HassElement {
 
   @state() private _lovelaceConfig?: LovelaceConfig;
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._lovelaceConfig) {
-      return html``;
+      return nothing;
     }
     return html`
       <hc-lovelace

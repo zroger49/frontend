@@ -21,19 +21,28 @@ import {
 import { atLeastVersion } from "../../../../src/common/config/version";
 import { isNavigationClick } from "../../../../src/common/dom/is-navigation-click";
 import {
-  fetchResources,
   getLegacyLovelaceCollection,
   getLovelaceCollection,
+} from "../../../../src/data/lovelace";
+import {
+  isStrategyDashboard,
   LegacyLovelaceConfig,
   LovelaceConfig,
-} from "../../../../src/data/lovelace";
+  LovelaceDashboardStrategyConfig,
+} from "../../../../src/data/lovelace/config/types";
+import { fetchResources } from "../../../../src/data/lovelace/resource";
 import { loadLovelaceResources } from "../../../../src/panels/lovelace/common/load-resources";
 import { HassElement } from "../../../../src/state/hass-element";
 import { castContext } from "../cast_context";
 import "./hc-launch-screen";
 
-let resourcesLoaded = false;
+const DEFAULT_CONFIG: LovelaceDashboardStrategyConfig = {
+  strategy: {
+    type: "original-states",
+  },
+};
 
+let resourcesLoaded = false;
 @customElement("hc-main")
 export class HcMain extends HassElement {
   @state() private _showDemo = false;
@@ -42,9 +51,11 @@ export class HcMain extends HassElement {
 
   @state() private _lovelacePath: string | number | null = null;
 
+  @state() private _urlPath?: string | null;
+
   @state() private _error?: string;
 
-  @state() private _urlPath?: string | null;
+  private _hassUUID?: string;
 
   private _unsubLovelace?: UnsubscribeFunc;
 
@@ -70,7 +81,7 @@ export class HcMain extends HassElement {
 
     if (
       !this._lovelaceConfig ||
-      this._lovelacePath === null ||
+      this._urlPath === undefined ||
       // Guard against part of HA not being loaded yet.
       !this.hass ||
       !this.hass.states ||
@@ -88,16 +99,18 @@ export class HcMain extends HassElement {
       <hc-lovelace
         .hass=${this.hass}
         .lovelaceConfig=${this._lovelaceConfig}
-        .viewPath=${this._lovelacePath}
         .urlPath=${this._urlPath}
-        @config-refresh=${this._generateLovelaceConfig}
+        .viewPath=${this._lovelacePath}
+        @config-refresh=${this._generateDefaultLovelaceConfig}
       ></hc-lovelace>
     `;
   }
 
   protected firstUpdated(changedProps) {
     super.firstUpdated(changedProps);
-    import("../second-load");
+    import("./hc-lovelace");
+    import("../../../../src/resources/ha-style");
+
     window.addEventListener("location-changed", () => {
       const panelPath = `/${this._urlPath || "lovelace"}/`;
       if (location.pathname.startsWith(panelPath)) {
@@ -125,6 +138,7 @@ export class HcMain extends HassElement {
 
     if (this.hass) {
       status.hassUrl = this.hass.auth.data.hassUrl;
+      status.hassUUID = this._hassUUID;
       status.lovelacePath = this._lovelacePath;
       status.urlPath = this._urlPath;
     }
@@ -163,6 +177,18 @@ export class HcMain extends HassElement {
   };
 
   private async _handleGetStatusMessage(msg: GetStatusMessage) {
+    if (
+      (this.hass && msg.hassUUID && msg.hassUUID !== this._hassUUID) ||
+      (this.hass && msg.hassUrl && msg.hassUrl !== this.hass.auth.data.hassUrl)
+    ) {
+      this._error = "Not connected to the same Home Assistant instance.";
+      this._sendError(
+        ReceiverErrorCode.WRONG_INSTANCE,
+        this._error,
+        msg.senderId!
+      );
+    }
+
     this._sendStatus(msg.senderId!);
   }
 
@@ -198,6 +224,17 @@ export class HcMain extends HassElement {
       this.hass.connection.close();
     }
     this.initializeHass(auth, connection);
+    if (this._hassUUID !== msg.hassUUID) {
+      this._hassUUID = msg.hassUUID;
+      this._lovelaceConfig = undefined;
+      this._urlPath = undefined;
+      this._lovelacePath = null;
+      if (this._unsubLovelace) {
+        this._unsubLovelace();
+        this._unsubLovelace = undefined;
+      }
+      resourcesLoaded = false;
+    }
     this._error = undefined;
     this._sendStatus();
   }
@@ -206,22 +243,58 @@ export class HcMain extends HassElement {
     this._showDemo = false;
     // We should not get this command before we are connected.
     // Means a client got out of sync. Let's send status to them.
-    if (!this.hass) {
+    if (!this.hass?.connected) {
       this._sendStatus(msg.senderId!);
       this._error = "Cannot show Lovelace because we're not connected.";
-      this._sendError(ReceiverErrorCode.NOT_CONNECTED, this._error);
+      this._sendError(
+        ReceiverErrorCode.NOT_CONNECTED,
+        this._error,
+        msg.senderId!
+      );
       return;
     }
+
+    if (
+      (msg.hassUUID && msg.hassUUID !== this._hassUUID) ||
+      (msg.hassUrl && msg.hassUrl !== this.hass.auth.data.hassUrl)
+    ) {
+      this._sendStatus(msg.senderId!);
+      this._error =
+        "Cannot show Lovelace because we're not connected to the same Home Assistant instance.";
+      this._sendError(
+        ReceiverErrorCode.WRONG_INSTANCE,
+        this._error,
+        msg.senderId!
+      );
+      return;
+    }
+
     this._error = undefined;
     if (msg.urlPath === "lovelace") {
       msg.urlPath = null;
     }
     this._lovelacePath = msg.viewPath;
+    if (msg.urlPath === "energy") {
+      this._lovelaceConfig = {
+        views: [
+          {
+            strategy: {
+              type: "energy",
+            },
+          },
+        ],
+      };
+      this._urlPath = "energy";
+      this._lovelacePath = null;
+      this._sendStatus();
+      return;
+    }
     if (!this._unsubLovelace || this._urlPath !== msg.urlPath) {
       this._urlPath = msg.urlPath;
       this._lovelaceConfig = undefined;
       if (this._unsubLovelace) {
         this._unsubLovelace();
+        this._unsubLovelace = undefined;
       }
       const llColl = atLeastVersion(this.hass.connection.haVersion, 0, 107)
         ? getLovelaceCollection(this.hass.connection, msg.urlPath)
@@ -230,9 +303,20 @@ export class HcMain extends HassElement {
       // configuration.
       try {
         await llColl.refresh();
-        this._unsubLovelace = llColl.subscribe((lovelaceConfig) =>
-          this._handleNewLovelaceConfig(lovelaceConfig)
-        );
+        this._unsubLovelace = llColl.subscribe(async (rawConfig) => {
+          if (isStrategyDashboard(rawConfig)) {
+            const { generateLovelaceDashboardStrategy } = await import(
+              "../../../../src/panels/lovelace/strategies/get-strategy"
+            );
+            const config = await generateLovelaceDashboardStrategy(
+              rawConfig.strategy,
+              this.hass!
+            );
+            this._handleNewLovelaceConfig(config);
+          } else {
+            this._handleNewLovelaceConfig(rawConfig);
+          }
+        });
       } catch (err: any) {
         if (
           atLeastVersion(this.hass.connection.haVersion, 0, 107) &&
@@ -246,7 +330,7 @@ export class HcMain extends HassElement {
         }
         // Generate a Lovelace config.
         this._unsubLovelace = () => undefined;
-        await this._generateLovelaceConfig();
+        await this._generateDefaultLovelaceConfig();
       }
     }
     if (!resourcesLoaded) {
@@ -255,24 +339,21 @@ export class HcMain extends HassElement {
         ? await fetchResources(this.hass!.connection)
         : (this._lovelaceConfig as LegacyLovelaceConfig).resources;
       if (resources) {
-        loadLovelaceResources(resources, this.hass!.auth.data.hassUrl);
+        loadLovelaceResources(resources, this.hass!);
       }
     }
 
     this._sendStatus();
   }
 
-  private async _generateLovelaceConfig() {
+  private async _generateDefaultLovelaceConfig() {
     const { generateLovelaceDashboardStrategy } = await import(
       "../../../../src/panels/lovelace/strategies/get-strategy"
     );
     this._handleNewLovelaceConfig(
       await generateLovelaceDashboardStrategy(
-        {
-          hass: this.hass!,
-          narrow: false,
-        },
-        "original-states"
+        DEFAULT_CONFIG.strategy,
+        this.hass!
       )
     );
   }

@@ -1,29 +1,36 @@
-import { UnsubscribeFunc } from "home-assistant-js-websocket";
 import "@material/mwc-list/mwc-list";
 import "@material/mwc-list/mwc-list-item";
+import { mdiSwapHorizontal } from "@mdi/js";
+import { UnsubscribeFunc } from "home-assistant-js-websocket";
+import {
+  css,
+  CSSResultGroup,
+  html,
+  LitElement,
+  TemplateResult,
+  nothing,
+} from "lit";
+import { customElement, property, state } from "lit/decorators";
+import { fireEvent } from "../../../../../common/dom/fire_event";
+import { createCloseHeading } from "../../../../../components/ha-dialog";
 import "../../../../../components/ha-expansion-panel";
 import "../../../../../components/ha-help-tooltip";
 import "../../../../../components/ha-svg-icon";
-import { mdiSwapHorizontal } from "@mdi/js";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators";
-import { fireEvent } from "../../../../../common/dom/fire_event";
 import {
-  DeviceRegistryEntry,
   computeDeviceName,
+  DeviceRegistryEntry,
   subscribeDeviceRegistry,
 } from "../../../../../data/device_registry";
 import {
-  subscribeZwaveNodeStatistics,
   ProtocolDataRate,
+  RssiError,
+  subscribeZwaveNodeStatistics,
   ZWaveJSNodeStatisticsUpdatedMessage,
   ZWaveJSRouteStatistics,
-  RssiError,
 } from "../../../../../data/zwave_js";
 import { haStyleDialog } from "../../../../../resources/styles";
 import { HomeAssistant } from "../../../../../types";
 import { ZWaveJSNodeStatisticsDialogParams } from "./show-dialog-zwave_js-node-statistics";
-import { createCloseHeading } from "../../../../../components/ha-dialog";
 
 type WorkingRouteStatistics =
   | (ZWaveJSRouteStatistics & {
@@ -69,9 +76,9 @@ class DialogZWaveJSNodeStatistics extends LitElement {
     fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.device) {
-      return html``;
+      return nothing;
     }
 
     return html`
@@ -357,7 +364,7 @@ class DialogZWaveJSNodeStatistics extends LitElement {
 
         const workingRoutesValueMap: [
           string,
-          WorkingRouteStatistics | null | undefined
+          WorkingRouteStatistics | null | undefined,
         ][] = [
           ["lwr", this._nodeStatistics?.lwr],
           ["nlwr", this._nodeStatistics?.nlwr],
@@ -454,11 +461,15 @@ class DialogZWaveJSNodeStatistics extends LitElement {
         .key-cell {
           display: table-cell;
           padding-right: 5px;
+          padding-inline-end: 5px;
+          padding-inline-start: initial;
         }
 
         .value-cell {
           display: table-cell;
           padding-left: 5px;
+          padding-inline-start: 5px;
+          padding-inline-end: initial;
         }
 
         span[slot="meta"] {

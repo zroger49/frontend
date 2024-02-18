@@ -1,19 +1,20 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
 // Tasks to run webpack.
-const fs = require("fs");
-const gulp = require("gulp");
-const webpack = require("webpack");
-const WebpackDevServer = require("webpack-dev-server");
-const log = require("fancy-log");
-const path = require("path");
-const paths = require("../paths");
-const {
+
+import fs from "fs";
+import path from "path";
+import log from "fancy-log";
+import gulp from "gulp";
+import webpack from "webpack";
+import WebpackDevServer from "webpack-dev-server";
+import env from "../env.cjs";
+import paths from "../paths.cjs";
+import {
   createAppConfig,
-  createDemoConfig,
   createCastConfig,
-  createHassioConfig,
+  createDemoConfig,
   createGalleryConfig,
-} = require("../webpack");
+  createHassioConfig,
+} from "../webpack.cjs";
 
 const bothBuilds = (createConfigFunc, params) => [
   createConfigFunc({ ...params, latestBuild: true }),
@@ -43,6 +44,7 @@ const runDevServer = async ({
 }) => {
   const server = new WebpackDevServer(
     {
+      hot: false,
       open: true,
       host: listenHost,
       port,
@@ -69,7 +71,6 @@ const doneHandler = (done) => (err, stats) => {
   }
 
   if (stats.hasErrors() || stats.hasWarnings()) {
-    // eslint-disable-next-line no-console
     console.log(stats.toString("minimal"));
   }
 
@@ -106,13 +107,17 @@ gulp.task("webpack-prod-app", () =>
   prodBuild(
     bothBuilds(createAppConfig, {
       isProdBuild: true,
+      isStatsBuild: env.isStatsBuild(),
+      isTestBuild: env.isTestBuild(),
     })
   )
 );
 
 gulp.task("webpack-dev-server-demo", () =>
   runDevServer({
-    compiler: webpack(bothBuilds(createDemoConfig, { isProdBuild: false })),
+    compiler: webpack(
+      createDemoConfig({ isProdBuild: false, latestBuild: true })
+    ),
     contentBase: paths.demo_output_root,
     port: 8090,
   })
@@ -128,7 +133,9 @@ gulp.task("webpack-prod-demo", () =>
 
 gulp.task("webpack-dev-server-cast", () =>
   runDevServer({
-    compiler: webpack(bothBuilds(createCastConfig, { isProdBuild: false })),
+    compiler: webpack(
+      createCastConfig({ isProdBuild: false, latestBuild: true })
+    ),
     contentBase: paths.cast_output_root,
     port: 8080,
     // Accessible from the network, because that's how Cast hits it.
@@ -163,14 +170,17 @@ gulp.task("webpack-prod-hassio", () =>
   prodBuild(
     bothBuilds(createHassioConfig, {
       isProdBuild: true,
+      isStatsBuild: env.isStatsBuild(),
+      isTestBuild: env.isTestBuild(),
     })
   )
 );
 
 gulp.task("webpack-dev-server-gallery", () =>
   runDevServer({
-    // We don't use the es5 build, but the dev server will fuck up the publicPath if we don't
-    compiler: webpack(bothBuilds(createGalleryConfig, { isProdBuild: false })),
+    compiler: webpack(
+      createGalleryConfig({ isProdBuild: false, latestBuild: true })
+    ),
     contentBase: paths.gallery_output_root,
     port: 8100,
     listenHost: "0.0.0.0",

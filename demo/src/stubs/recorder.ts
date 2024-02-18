@@ -13,9 +13,9 @@ import {
 import { MockHomeAssistant } from "../../../src/fake_data/provide_hass";
 
 const generateMeanStatistics = (
-  id: string,
   start: Date,
   end: Date,
+  // eslint-disable-next-line @typescript-eslint/default-param-last
   period: "5minute" | "hour" | "day" | "month" = "hour",
   initValue: number,
   maxDiff: number
@@ -29,13 +29,12 @@ const generateMeanStatistics = (
     const delta = Math.random() * maxDiff;
     const mean = lastVal + delta;
     statistics.push({
-      statistic_id: id,
-      start: currentDate.toISOString(),
-      end: currentDate.toISOString(),
+      start: currentDate.getTime(),
+      end: currentDate.getTime(),
       mean,
       min: mean - Math.random() * maxDiff,
       max: mean + Math.random() * maxDiff,
-      last_reset: "1970-01-01T00:00:00+00:00",
+      last_reset: 0,
       state: mean,
       sum: null,
     });
@@ -44,16 +43,16 @@ const generateMeanStatistics = (
       period === "day"
         ? addDays(currentDate, 1)
         : period === "month"
-        ? addMonths(currentDate, 1)
-        : addHours(currentDate, 1);
+          ? addMonths(currentDate, 1)
+          : addHours(currentDate, 1);
   }
   return statistics;
 };
 
 const generateSumStatistics = (
-  id: string,
   start: Date,
   end: Date,
+  // eslint-disable-next-line @typescript-eslint/default-param-last
   period: "5minute" | "hour" | "day" | "month" = "hour",
   initValue: number,
   maxDiff: number
@@ -67,13 +66,13 @@ const generateSumStatistics = (
     const add = Math.random() * maxDiff;
     sum += add;
     statistics.push({
-      statistic_id: id,
-      start: currentDate.toISOString(),
-      end: currentDate.toISOString(),
+      start: currentDate.getTime(),
+      end: currentDate.getTime(),
       mean: null,
       min: null,
       max: null,
-      last_reset: "1970-01-01T00:00:00+00:00",
+      last_reset: 0,
+      change: add,
       state: initValue + sum,
       sum,
     });
@@ -81,16 +80,16 @@ const generateSumStatistics = (
       period === "day"
         ? addDays(currentDate, 1)
         : period === "month"
-        ? addMonths(currentDate, 1)
-        : addHours(currentDate, 1);
+          ? addMonths(currentDate, 1)
+          : addHours(currentDate, 1);
   }
   return statistics;
 };
 
 const generateCurvedStatistics = (
-  id: string,
   start: Date,
   end: Date,
+  // eslint-disable-next-line @typescript-eslint/default-param-last
   _period: "5minute" | "hour" | "day" | "month" = "hour",
   initValue: number,
   maxDiff: number,
@@ -105,16 +104,16 @@ const generateCurvedStatistics = (
   let half = false;
   const now = new Date();
   while (end > currentDate && currentDate < now) {
-    const add = Math.random() * maxDiff;
-    sum += i * add;
+    const add = i * (Math.random() * maxDiff);
+    sum += add;
     statistics.push({
-      statistic_id: id,
-      start: currentDate.toISOString(),
-      end: currentDate.toISOString(),
+      start: currentDate.getTime(),
+      end: currentDate.getTime(),
       mean: null,
       min: null,
       max: null,
-      last_reset: "1970-01-01T00:00:00+00:00",
+      last_reset: 0,
+      change: add,
       state: initValue + sum,
       sum: metered ? sum : null,
     });
@@ -137,14 +136,13 @@ const statisticsFunctions: Record<
   ) => StatisticValue[]
 > = {
   "sensor.energy_consumption_tarif_1": (
-    id: string,
+    _id: string,
     start: Date,
     end: Date,
     period = "hour"
   ) => {
     if (period !== "hour") {
       return generateSumStatistics(
-        id,
         start,
         end,
         period,
@@ -153,20 +151,12 @@ const statisticsFunctions: Record<
       );
     }
     const morningEnd = new Date(start.getTime() + 10 * 60 * 60 * 1000);
-    const morningLow = generateSumStatistics(
-      id,
-      start,
-      morningEnd,
-      period,
-      0,
-      0.7
-    );
+    const morningLow = generateSumStatistics(start, morningEnd, period, 0, 0.7);
     const eveningStart = new Date(start.getTime() + 20 * 60 * 60 * 1000);
     const morningFinalVal = morningLow.length
       ? morningLow[morningLow.length - 1].sum!
       : 0;
     const empty = generateSumStatistics(
-      id,
       morningEnd,
       eveningStart,
       period,
@@ -174,7 +164,6 @@ const statisticsFunctions: Record<
       0
     );
     const eveningLow = generateSumStatistics(
-      id,
       eveningStart,
       end,
       period,
@@ -184,14 +173,13 @@ const statisticsFunctions: Record<
     return [...morningLow, ...empty, ...eveningLow];
   },
   "sensor.energy_consumption_tarif_2": (
-    id: string,
+    _id: string,
     start: Date,
     end: Date,
     period = "hour"
   ) => {
     if (period !== "hour") {
       return generateSumStatistics(
-        id,
         start,
         end,
         period,
@@ -202,7 +190,6 @@ const statisticsFunctions: Record<
     const morningEnd = new Date(start.getTime() + 9 * 60 * 60 * 1000);
     const eveningStart = new Date(start.getTime() + 20 * 60 * 60 * 1000);
     const highTarif = generateSumStatistics(
-      id,
       morningEnd,
       eveningStart,
       period,
@@ -212,9 +199,8 @@ const statisticsFunctions: Record<
     const highTarifFinalVal = highTarif.length
       ? highTarif[highTarif.length - 1].sum!
       : 0;
-    const morning = generateSumStatistics(id, start, morningEnd, period, 0, 0);
+    const morning = generateSumStatistics(start, morningEnd, period, 0, 0);
     const evening = generateSumStatistics(
-      id,
       eveningStart,
       end,
       period,
@@ -223,18 +209,17 @@ const statisticsFunctions: Record<
     );
     return [...morning, ...highTarif, ...evening];
   },
-  "sensor.energy_production_tarif_1": (id, start, end, period = "hour") =>
-    generateSumStatistics(id, start, end, period, 0, 0),
+  "sensor.energy_production_tarif_1": (_id, start, end, period = "hour") =>
+    generateSumStatistics(start, end, period, 0, 0),
   "sensor.energy_production_tarif_1_compensation": (
-    id,
+    _id,
     start,
     end,
     period = "hour"
-  ) => generateSumStatistics(id, start, end, period, 0, 0),
-  "sensor.energy_production_tarif_2": (id, start, end, period = "hour") => {
+  ) => generateSumStatistics(start, end, period, 0, 0),
+  "sensor.energy_production_tarif_2": (_id, start, end, period = "hour") => {
     if (period !== "hour") {
       return generateSumStatistics(
-        id,
         start,
         end,
         period,
@@ -246,7 +231,6 @@ const statisticsFunctions: Record<
     const productionEnd = new Date(start.getTime() + 21 * 60 * 60 * 1000);
     const dayEnd = new Date(endOfDay(productionEnd));
     const production = generateCurvedStatistics(
-      id,
       productionStart,
       productionEnd,
       period,
@@ -257,16 +241,8 @@ const statisticsFunctions: Record<
     const productionFinalVal = production.length
       ? production[production.length - 1].sum!
       : 0;
-    const morning = generateSumStatistics(
-      id,
-      start,
-      productionStart,
-      period,
-      0,
-      0
-    );
+    const morning = generateSumStatistics(start, productionStart, period, 0, 0);
     const evening = generateSumStatistics(
-      id,
       productionEnd,
       dayEnd,
       period,
@@ -274,7 +250,6 @@ const statisticsFunctions: Record<
       0
     );
     const rest = generateSumStatistics(
-      id,
       dayEnd,
       end,
       period,
@@ -283,10 +258,9 @@ const statisticsFunctions: Record<
     );
     return [...morning, ...production, ...evening, ...rest];
   },
-  "sensor.solar_production": (id, start, end, period = "hour") => {
+  "sensor.solar_production": (_id, start, end, period = "hour") => {
     if (period !== "hour") {
       return generateSumStatistics(
-        id,
         start,
         end,
         period,
@@ -298,7 +272,6 @@ const statisticsFunctions: Record<
     const productionEnd = new Date(start.getTime() + 23 * 60 * 60 * 1000);
     const dayEnd = new Date(endOfDay(productionEnd));
     const production = generateCurvedStatistics(
-      id,
       productionStart,
       productionEnd,
       period,
@@ -309,16 +282,8 @@ const statisticsFunctions: Record<
     const productionFinalVal = production.length
       ? production[production.length - 1].sum!
       : 0;
-    const morning = generateSumStatistics(
-      id,
-      start,
-      productionStart,
-      period,
-      0,
-      0
-    );
+    const morning = generateSumStatistics(start, productionStart, period, 0, 0);
     const evening = generateSumStatistics(
-      id,
       productionEnd,
       dayEnd,
       period,
@@ -326,7 +291,6 @@ const statisticsFunctions: Record<
       0
     );
     const rest = generateSumStatistics(
-      id,
       dayEnd,
       end,
       period,
@@ -362,7 +326,6 @@ export const mockRecorder = (mockHass: MockHomeAssistant) => {
           statistics[id] =
             entityState && "last_reset" in entityState.attributes
               ? generateSumStatistics(
-                  id,
                   start,
                   end,
                   period,
@@ -370,7 +333,6 @@ export const mockRecorder = (mockHass: MockHomeAssistant) => {
                   state * (state > 80 ? 0.01 : 0.05)
                 )
               : generateMeanStatistics(
-                  id,
                   start,
                   end,
                   period,

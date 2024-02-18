@@ -1,4 +1,4 @@
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 
 @customElement("ha-card")
@@ -16,7 +16,7 @@ export class HaCard extends LitElement {
         );
         box-shadow: var(--ha-card-box-shadow, none);
         box-sizing: border-box;
-        border-radius: var(--ha-card-border-radius, 16px);
+        border-radius: var(--ha-card-border-radius, 12px);
         border-width: var(--ha-card-border-width, 1px);
         border-style: solid;
         border-color: var(
@@ -70,11 +70,11 @@ export class HaCard extends LitElement {
     `;
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     return html`
       ${this.header
         ? html`<h1 class="card-header">${this.header}</h1>`
-        : html``}
+        : nothing}
       <slot></slot>
     `;
   }

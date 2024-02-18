@@ -1,7 +1,7 @@
 import "@material/mwc-button/mwc-button";
 import { mdiCheckCircle, mdiCloseCircle, mdiRobotDead } from "@mdi/js";
 import { UnsubscribeFunc } from "home-assistant-js-websocket";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../../../common/dom/fire_event";
 import "../../../../../components/ha-circular-progress";
@@ -52,9 +52,9 @@ class DialogZWaveJSRemoveFailedNode extends LitElement {
     this.closeDialog();
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.device_id) {
-      return html``;
+      return nothing;
     }
 
     return html`
@@ -91,7 +91,7 @@ class DialogZWaveJSRemoveFailedNode extends LitElement {
         ${this._status === "started"
           ? html`
               <div class="flex-container">
-                <ha-circular-progress active></ha-circular-progress>
+                <ha-circular-progress indeterminate></ha-circular-progress>
                 <div class="status">
                   <p>
                     <b>
@@ -138,8 +138,7 @@ class DialogZWaveJSRemoveFailedNode extends LitElement {
                   <p>
                     ${this.hass.localize(
                       "ui.panel.config.zwave_js.remove_failed_node.removal_finished",
-                      "id",
-                      this._node!.node_id
+                      { id: this._node!.node_id }
                     )}
                   </p>
                 </div>
@@ -220,6 +219,8 @@ class DialogZWaveJSRemoveFailedNode extends LitElement {
         .flex-container ha-circular-progress,
         .flex-container ha-svg-icon {
           margin-right: 20px;
+          margin-inline-end: 20px;
+          margin-inline-start: initial;
         }
       `,
     ];

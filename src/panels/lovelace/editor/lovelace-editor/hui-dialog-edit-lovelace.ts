@@ -1,14 +1,14 @@
 import "@material/mwc-button";
-import { CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../../common/dom/fire_event";
 import "../../../../components/ha-circular-progress";
-import type { LovelaceConfig } from "../../../../data/lovelace";
+import "../../../../components/ha-dialog";
 import { haStyleDialog } from "../../../../resources/styles";
 import type { HomeAssistant } from "../../../../types";
 import type { Lovelace } from "../../types";
 import "./hui-lovelace-editor";
-import "../../../../components/ha-dialog";
+import { LovelaceConfig } from "../../../../data/lovelace/config/types";
 
 @customElement("hui-dialog-edit-lovelace")
 export class HuiDialogEditLovelace extends LitElement {
@@ -31,9 +31,9 @@ export class HuiDialogEditLovelace extends LitElement {
     fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._config) {
-      return html``;
+      return nothing;
     }
     return html`
       <ha-dialog
@@ -63,9 +63,9 @@ export class HuiDialogEditLovelace extends LitElement {
         >
           ${this._saving
             ? html`<ha-circular-progress
-                active
+                indeterminate
                 size="small"
-                title="Saving"
+                aria-label="Saving"
               ></ha-circular-progress>`
             : ""}
           ${this.hass!.localize("ui.common.save")}</mwc-button

@@ -37,13 +37,10 @@ class HaAlert extends LitElement {
 
   @property({ type: Boolean }) public dismissable = false;
 
-  @property({ type: Boolean }) public rtl = false;
-
   public render() {
     return html`
       <div
         class="issue-type ${classMap({
-          rtl: this.rtl,
           [this.alertType]: true,
         })}"
         role="alert"
@@ -84,9 +81,6 @@ class HaAlert extends LitElement {
       padding: 8px;
       display: flex;
     }
-    .issue-type.rtl {
-      flex-direction: row-reverse;
-    }
     .issue-type::after {
       position: absolute;
       top: 0;
@@ -104,15 +98,12 @@ class HaAlert extends LitElement {
     .icon.no-title {
       align-self: center;
     }
-    .issue-type.rtl > .content {
-      flex-direction: row-reverse;
-      text-align: right;
-    }
     .content {
       display: flex;
       justify-content: space-between;
       align-items: center;
       width: 100%;
+      text-align: var(--float-start);
     }
     .action {
       z-index: 1;
@@ -124,10 +115,8 @@ class HaAlert extends LitElement {
       word-break: break-word;
       margin-left: 8px;
       margin-right: 0;
-    }
-    .issue-type.rtl > .content > .main-content {
-      margin-left: 0;
-      margin-right: 8px;
+      margin-inline-start: 8px;
+      margin-inline-end: 0;
     }
     .title {
       margin-top: 2px;
@@ -164,6 +153,10 @@ class HaAlert extends LitElement {
     }
     .issue-type.success::after {
       background-color: var(--success-color);
+    }
+    :host ::slotted(ul) {
+      margin: 0;
+      padding-inline-start: 20px;
     }
   `;
 }

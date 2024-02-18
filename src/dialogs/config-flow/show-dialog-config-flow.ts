@@ -19,11 +19,14 @@ export const showConfigFlowDialog = (
   dialogParams: Omit<DataEntryFlowDialogParams, "flowConfig">
 ): void =>
   showFlowDialog(element, dialogParams, {
+    flowType: "config_flow",
     loadDevicesAndAreas: true,
     createFlow: async (hass, handler) => {
       const [step] = await Promise.all([
         createConfigFlow(hass, handler),
+        hass.loadFragmentTranslation("config"),
         hass.loadBackendTranslation("config", handler),
+        hass.loadBackendTranslation("selector", handler),
         // Used as fallback if no header defined for step
         hass.loadBackendTranslation("title", handler),
       ]);
@@ -31,7 +34,9 @@ export const showConfigFlowDialog = (
     },
     fetchFlow: async (hass, flowId) => {
       const step = await fetchConfigFlow(hass, flowId);
+      await hass.loadFragmentTranslation("config");
       await hass.loadBackendTranslation("config", step.handler);
+      await hass.loadBackendTranslation("selector", step.handler);
       return step;
     },
     handleFlowStep: handleConfigFlowStep,
@@ -53,7 +58,8 @@ export const showConfigFlowDialog = (
     renderShowFormStepHeader(hass, step) {
       return (
         hass.localize(
-          `component.${step.handler}.config.step.${step.step_id}.title`
+          `component.${step.handler}.config.step.${step.step_id}.title`,
+          step.description_placeholders
         ) || hass.localize(`component.${step.handler}.title`)
       );
     },
@@ -87,9 +93,28 @@ export const showConfigFlowDialog = (
     },
 
     renderShowFormStepFieldError(hass, step, error) {
-      return hass.localize(
-        `component.${step.handler}.config.error.${error}`,
-        step.description_placeholders
+      return (
+        hass.localize(
+          `component.${step.handler}.config.error.${error}`,
+          step.description_placeholders
+        ) || error
+      );
+    },
+
+    renderShowFormStepFieldLocalizeValue(hass, step, key) {
+      return hass.localize(`component.${step.handler}.selector.${key}`);
+    },
+
+    renderShowFormStepSubmitButton(hass, step) {
+      return (
+        hass.localize(
+          `component.${step.handler}.config.step.${step.step_id}.submit`
+        ) ||
+        hass.localize(
+          `ui.panel.config.integrations.config_flow.${
+            step.last_step === false ? "next" : "submit"
+          }`
+        )
       );
     },
 
@@ -149,8 +174,7 @@ export const showConfigFlowDialog = (
         <p>
           ${hass.localize(
             "ui.panel.config.integrations.config_flow.created_config",
-            "name",
-            step.title
+            { name: step.title }
           )}
         </p>
       `;

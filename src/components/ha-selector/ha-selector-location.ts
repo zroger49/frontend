@@ -16,7 +16,7 @@ export class HaLocationSelector extends LitElement {
 
   @property({ attribute: false }) public selector!: LocationSelector;
 
-  @property() public value?: LocationSelectorValue;
+  @property({ type: Object }) public value?: LocationSelectorValue;
 
   @property() public label?: string;
 
@@ -26,6 +26,7 @@ export class HaLocationSelector extends LitElement {
 
   protected render() {
     return html`
+      <p>${this.label ? this.label : ""}</p>
       <ha-locations-editor
         class="flex"
         .hass=${this.hass}
@@ -43,19 +44,25 @@ export class HaLocationSelector extends LitElement {
       value?: LocationSelectorValue
     ): MarkerLocation[] => {
       const computedStyles = getComputedStyle(this);
-      const zoneRadiusColor = selector.location.radius
+      const zoneRadiusColor = selector.location?.radius
         ? computedStyles.getPropertyValue("--zone-radius-color") ||
           computedStyles.getPropertyValue("--accent-color")
         : undefined;
       return [
         {
           id: "location",
-          latitude: value?.latitude || this.hass.config.latitude,
-          longitude: value?.longitude || this.hass.config.longitude,
-          radius: selector.location.radius ? value?.radius || 1000 : undefined,
+          latitude:
+            !value || isNaN(value.latitude)
+              ? this.hass.config.latitude
+              : value.latitude,
+          longitude:
+            !value || isNaN(value.longitude)
+              ? this.hass.config.longitude
+              : value.longitude,
+          radius: selector.location?.radius ? value?.radius || 1000 : undefined,
           radius_color: zoneRadiusColor,
           icon:
-            selector.location.icon || selector.location.radius
+            selector.location?.icon || selector.location?.radius
               ? "mdi:map-marker-radius"
               : "mdi:map-marker",
           location_editable: true,
@@ -78,9 +85,12 @@ export class HaLocationSelector extends LitElement {
   }
 
   static styles = css`
-    :host {
+    ha-locations-editor {
       display: block;
       height: 400px;
+    }
+    p {
+      margin-top: 0;
     }
   `;
 }

@@ -1,9 +1,17 @@
-import { html, LitElement, TemplateResult } from "lit";
+import {
+  html,
+  LitElement,
+  nothing,
+  css,
+  CSSResultGroup,
+  PropertyValues,
+} from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { HomeAssistant } from "../../../../types";
+import "../../components/hui-energy-period-selector";
 import { LovelaceCard } from "../../types";
 import { EnergyCardBaseConfig } from "../types";
-import "../../components/hui-energy-period-selector";
+import { hasConfigChanged } from "../../common/has-changed";
 
 @customElement("hui-energy-date-selection-card")
 export class HuiEnergyDateSelectionCard
@@ -22,16 +30,38 @@ export class HuiEnergyDateSelectionCard
     this._config = config;
   }
 
-  protected render(): TemplateResult {
+  protected shouldUpdate(changedProps: PropertyValues): boolean {
+    return (
+      hasConfigChanged(this, changedProps) ||
+      changedProps.size > 1 ||
+      !changedProps.has("hass")
+    );
+  }
+
+  protected render() {
     if (!this.hass || !this._config) {
-      return html``;
+      return nothing;
     }
 
     return html`
-      <hui-energy-period-selector
-        .hass=${this.hass}
-        .collectionKey=${this._config.collection_key}
-      ></hui-energy-period-selector>
+      <ha-card>
+        <div class="card-content">
+          <hui-energy-period-selector
+            .hass=${this.hass}
+            .collectionKey=${this._config.collection_key}
+          ></hui-energy-period-selector>
+        </div>
+      </ha-card>
+    `;
+  }
+
+  static get styles(): CSSResultGroup {
+    return css`
+      .padded {
+        padding-left: 16px !important;
+        padding-inline-start: 16px !important;
+        padding-inline-end: initial !important;
+      }
     `;
   }
 }

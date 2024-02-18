@@ -1,10 +1,9 @@
 import "@material/mwc-button/mwc-button";
-import "@polymer/paper-tooltip/paper-tooltip";
+import "@lrnwebcomponents/simple-tooltip/simple-tooltip";
 import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
 import { customElement, property, query } from "lit/decorators";
 import { fireEvent } from "../common/dom/fire_event";
 import { LocalizeFunc } from "../common/translations/localize";
-import { computeRTLDirection } from "../common/util/compute_rtl";
 import "../components/data-table/ha-data-table";
 import type {
   DataTableColumnContainer,
@@ -116,7 +115,7 @@ export class HaTabsSubpageDataTable extends LitElement {
    * Function to call when the back button is pressed.
    * @type {() => void}
    */
-  @property() public backCallback?: () => void;
+  @property({ attribute: false }) public backCallback?: () => void;
 
   /**
    * String to show when there are no records in the data table.
@@ -124,13 +123,19 @@ export class HaTabsSubpageDataTable extends LitElement {
    */
   @property({ type: String }) public noDataText?: string;
 
-  @property() public route!: Route;
+  /**
+   * Hides the data table and show an empty message.
+   * @type {Boolean}
+   */
+  @property({ type: Boolean }) public empty = false;
+
+  @property({ attribute: false }) public route!: Route;
 
   /**
    * Array of tabs to show on the page.
    * @type {Array}
    */
-  @property() public tabs: PageNavigation[] = [];
+  @property({ attribute: false }) public tabs: PageNavigation[] = [];
 
   /**
    * Force hides the filter menu.
@@ -147,11 +152,9 @@ export class HaTabsSubpageDataTable extends LitElement {
   protected render(): TemplateResult {
     const hiddenLabel = this.numHidden
       ? this.hiddenLabel ||
-        this.hass.localize(
-          "ui.components.data-table.hidden",
-          "number",
-          this.numHidden
-        ) ||
+        this.hass.localize("ui.components.data-table.hidden", {
+          number: this.numHidden,
+        }) ||
         this.numHidden
       : undefined;
 
@@ -166,8 +169,7 @@ export class HaTabsSubpageDataTable extends LitElement {
       .filter=${this.filter}
       .suffix=${!this.narrow}
       @value-changed=${this._handleSearchChange}
-      .label=${this.searchLabel ||
-      this.hass.localize("ui.components.data-table.search")}
+      .label=${this.searchLabel}
     >
       ${!this.narrow
         ? html`<div
@@ -201,56 +203,60 @@ export class HaTabsSubpageDataTable extends LitElement {
         .mainPage=${this.mainPage}
         .supervisor=${this.supervisor}
       >
-        ${!this.hideFilterMenu
-          ? html`
-              <div slot="toolbar-icon">
-                ${this.narrow
+        ${this.empty
+          ? html`<div class="center">
+              <slot name="empty">${this.noDataText}</slot>
+            </div>`
+          : html`${!this.hideFilterMenu
+                ? html`
+                    <div slot="toolbar-icon">
+                      ${this.narrow
+                        ? html`
+                            <div class="filter-menu">
+                              ${this.numHidden || this.activeFilters
+                                ? html`<span class="badge"
+                                    >${this.numHidden || "!"}</span
+                                  >`
+                                : ""}
+                              <slot name="filter-menu"></slot>
+                            </div>
+                          `
+                        : ""}<slot name="toolbar-icon"></slot>
+                    </div>
+                  `
+                : ""}
+              ${this.narrow
+                ? html`
+                    <div slot="header">
+                      <slot name="header">
+                        <div class="search-toolbar">${headerToolbar}</div>
+                      </slot>
+                    </div>
+                  `
+                : ""}
+              <ha-data-table
+                .hass=${this.hass}
+                .columns=${this.columns}
+                .data=${this.data}
+                .noDataText=${this.noDataText}
+                .filter=${this.filter}
+                .selectable=${this.selectable}
+                .hasFab=${this.hasFab}
+                .id=${this.id}
+                .clickable=${this.clickable}
+                .appendRow=${this.appendRow}
+              >
+                ${!this.narrow
                   ? html`
-                      <div class="filter-menu">
-                        ${this.numHidden || this.activeFilters
-                          ? html`<span class="badge"
-                              >${this.numHidden || "!"}</span
-                            >`
-                          : ""}
-                        <slot name="filter-menu"></slot>
+                      <div slot="header">
+                        <slot name="header">
+                          <div class="table-header">${headerToolbar}</div>
+                        </slot>
                       </div>
                     `
-                  : ""}<slot name="toolbar-icon"></slot>
-              </div>
-            `
-          : ""}
-        ${this.narrow
-          ? html`
-              <div slot="header">
-                <slot name="header">
-                  <div class="search-toolbar">${headerToolbar}</div>
-                </slot>
-              </div>
-            `
-          : ""}
-        <ha-data-table
-          .hass=${this.hass}
-          .columns=${this.columns}
-          .data=${this.data}
-          .filter=${this.filter}
-          .selectable=${this.selectable}
-          .hasFab=${this.hasFab}
-          .id=${this.id}
-          .noDataText=${this.noDataText}
-          .dir=${computeRTLDirection(this.hass)}
-          .clickable=${this.clickable}
-          .appendRow=${this.appendRow}
-        >
-          ${!this.narrow
-            ? html`
-                <div slot="header">
-                  <slot name="header">
-                    <div class="table-header">${headerToolbar}</div>
-                  </slot>
-                </div>
-              `
-            : html` <div slot="header"></div> `}
-        </ha-data-table>
+                  : html` <div slot="header"></div> `}
+              </ha-data-table>`}
+
         <div slot="fab"><slot name="fab"></slot></div>
       </hass-tabs-subpage>
     `;
@@ -323,7 +329,6 @@ export class HaTabsSubpageDataTable extends LitElement {
         --text-field-overflow: initial;
         display: flex;
         justify-content: flex-end;
-        margin-right: 8px;
         color: var(--primary-text-color);
       }
       .active-filters {
@@ -333,15 +338,21 @@ export class HaTabsSubpageDataTable extends LitElement {
         align-items: center;
         padding: 2px 2px 2px 8px;
         margin-left: 4px;
+        margin-inline-start: 4px;
+        margin-inline-end: initial;
         font-size: 14px;
         width: max-content;
         cursor: initial;
+        direction: var(--direction);
       }
       .active-filters ha-svg-icon {
         color: var(--primary-color);
       }
       .active-filters mwc-button {
         margin-left: 8px;
+        margin-inline-start: 8px;
+        margin-inline-end: initial;
+        direction: var(--direction);
       }
       .active-filters::before {
         background-color: var(--primary-color);
@@ -371,6 +382,16 @@ export class HaTabsSubpageDataTable extends LitElement {
       }
       .filter-menu {
         position: relative;
+      }
+      .center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-sizing: border-box;
+        height: 100%;
+        width: 100%;
+        padding: 16px;
       }
     `;
   }

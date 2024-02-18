@@ -31,7 +31,7 @@ export class HaExpansionPanel extends LitElement {
 
   protected render(): TemplateResult {
     return html`
-      <div class="top">
+      <div class="top ${classMap({ expanded: this.expanded })}">
         <div
           id="summary"
           @click=${this._toggleContainer}
@@ -147,6 +147,12 @@ export class HaExpansionPanel extends LitElement {
       .top {
         display: flex;
         align-items: center;
+        border-radius: var(--ha-card-border-radius, 12px);
+      }
+
+      .top.expanded {
+        border-bottom-left-radius: 0px;
+        border-bottom-right-radius: 0px;
       }
 
       .top.focused {
@@ -157,20 +163,23 @@ export class HaExpansionPanel extends LitElement {
         box-shadow: none;
         border-width: 1px;
         border-style: solid;
-        border-color: var(
-          --ha-card-border-color,
-          var(--divider-color, #e0e0e0)
-        );
-        border-radius: var(--ha-card-border-radius, 16px);
+        border-color: var(--outline-color);
+        border-radius: var(--ha-card-border-radius, 12px);
       }
 
       .summary-icon {
+        transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        direction: var(--direction);
         margin-left: 8px;
+        margin-inline-start: 8px;
+        margin-inline-end: initial;
       }
 
       :host([leftchevron]) .summary-icon {
         margin-left: 0;
         margin-right: 8px;
+        margin-inline-start: 0;
+        margin-inline-end: 8px;
       }
 
       #summary {
@@ -183,11 +192,6 @@ export class HaExpansionPanel extends LitElement {
         overflow: hidden;
         font-weight: 500;
         outline: none;
-      }
-
-      .summary-icon {
-        transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
-        direction: var(--direction);
       }
 
       .summary-icon.expanded {

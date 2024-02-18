@@ -1,7 +1,11 @@
 import { sanitizeUrl } from "@braintree/sanitize-url";
-import { html, LitElement } from "lit";
+import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { isComponentLoaded } from "../../common/config/is_component_loaded";
+import {
+  protocolIntegrationPicked,
+  PROTOCOL_INTEGRATIONS,
+} from "../../common/integrations/protocolIntegrationPicked";
 import { navigate } from "../../common/navigate";
 import {
   createSearchParam,
@@ -15,6 +19,9 @@ import { documentationUrl } from "../../util/documentation-url";
 export const getMyRedirects = (hasSupervisor: boolean): Redirects => ({
   application_credentials: {
     redirect: "/config/application_credentials",
+  },
+  developer_assist: {
+    redirect: "/developer-tools/assist",
   },
   developer_states: {
     redirect: "/developer-tools/state",
@@ -40,6 +47,13 @@ export const getMyRedirects = (hasSupervisor: boolean): Redirects => ({
   server_controls: {
     redirect: "/developer-tools/yaml",
   },
+  calendar: {
+    component: "calendar",
+    redirect: "/calendar",
+  },
+  companion_app: {
+    redirect: "#external-app-configuration",
+  },
   config: {
     redirect: "/config/dashboard",
   },
@@ -48,19 +62,25 @@ export const getMyRedirects = (hasSupervisor: boolean): Redirects => ({
     redirect: "/config/cloud",
   },
   config_flow_start: {
-    redirect: "/config/integrations/add",
+    redirect: "/config/integrations/dashboard/add",
     params: {
       domain: "string",
     },
   },
   brand: {
-    redirect: "/config/integrations/add",
+    redirect: "/config/integrations/dashboard/add",
     params: {
       brand: "string",
     },
   },
   integrations: {
     redirect: "/config/integrations",
+  },
+  integration: {
+    redirect: "/config/integrations/integration",
+    params: {
+      domain: "string",
+    },
   },
   config_mqtt: {
     component: "mqtt",
@@ -73,6 +93,18 @@ export const getMyRedirects = (hasSupervisor: boolean): Redirects => ({
   config_zwave_js: {
     component: "zwave_js",
     redirect: "/config/zwave_js/dashboard",
+  },
+  add_zigbee_device: {
+    component: "zha",
+    redirect: "/config/zha/add",
+  },
+  add_zwave_device: {
+    component: "zwave_js",
+    redirect: "/config/zwave_js/add",
+  },
+  add_matter_device: {
+    component: "matter",
+    redirect: "/config/matter/add",
   },
   config_energy: {
     component: "energy",
@@ -121,6 +153,9 @@ export const getMyRedirects = (hasSupervisor: boolean): Redirects => ({
     component: "tag",
     redirect: "/config/tags",
   },
+  voice_assistants: {
+    redirect: "/config/voice-assistants",
+  },
   lovelace_dashboards: {
     component: "lovelace",
     redirect: "/config/lovelace/dashboards",
@@ -154,6 +189,9 @@ export const getMyRedirects = (hasSupervisor: boolean): Redirects => ({
   },
   logs: {
     redirect: "/config/logs",
+    params: {
+      provider: "string?",
+    },
   },
   repairs: {
     component: "repairs",
@@ -220,7 +258,7 @@ export const getMyRedirects = (hasSupervisor: boolean): Redirects => ({
   },
   supervisor_logs: {
     // Moved from Supervisor panel in 2022.5
-    redirect: "/config/logs",
+    redirect: "/config/logs?provider=supervisor",
   },
   supervisor_info: {
     // Moved from Supervisor panel in 2022.5
@@ -262,7 +300,7 @@ export interface Redirect {
 class HaPanelMy extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public route!: Route;
+  @property({ attribute: false }) public route!: Route;
 
   @state() public _error?: string;
 
@@ -291,11 +329,36 @@ class HaPanelMy extends LitElement {
       return;
     }
 
+    if (this._redirect.redirect === "#external-app-configuration") {
+      if (this.hass.auth.external?.config.hasSettingsScreen) {
+        this.hass.auth.external!.fireMessage({ type: "config_screen/show" });
+        return;
+      }
+      this._error = "not_app";
+      return;
+    }
+
     if (
       this._redirect.component &&
       !isComponentLoaded(this.hass, this._redirect.component)
     ) {
+      this.hass.loadBackendTranslation("title", this._redirect.component);
       this._error = "no_component";
+      const component = this._redirect.component;
+      if (
+        (PROTOCOL_INTEGRATIONS as ReadonlyArray<string>).includes(component)
+      ) {
+        const params = extractSearchParamsObject();
+        this.hass
+          .loadFragmentTranslation("config")
+          .then()
+          .then(() => {
+            protocolIntegrationPicked(this, this.hass, component, {
+              domain: params.domain,
+              brand: params.brand,
+            });
+          });
+      }
       return;
     }
 
@@ -320,52 +383,61 @@ class HaPanelMy extends LitElement {
       switch (this._error) {
         case "not_supported":
           error =
-            this.hass.localize(
-              "ui.panel.my.not_supported",
-              "link",
-              html`<a
+            this.hass.localize("ui.panel.my.not_supported", {
+              link: html`<a
                 target="_blank"
                 rel="noreferrer noopener"
                 href="https://my.home-assistant.io/faq.html#supported-pages"
                 >${this.hass.localize("ui.panel.my.faq_link")}</a
-              >`
-            ) || "This redirect is not supported.";
+              >`,
+            }) || "This redirect is not supported.";
           break;
         case "no_component":
           error =
-            this.hass.localize(
-              "ui.panel.my.component_not_loaded",
-              "integration",
-              html`<a
+            this.hass.localize("ui.panel.my.component_not_loaded", {
+              integration: html`<a
                 target="_blank"
                 rel="noreferrer noopener"
                 href=${documentationUrl(
                   this.hass,
                   `/integrations/${this._redirect!.component!}`
                 )}
-              >
-                ${domainToName(this.hass.localize, this._redirect!.component!)}
-              </a>`
-            ) || "This redirect is not supported.";
+                >${domainToName(
+                  this.hass.localize,
+                  this._redirect!.component!
+                )}</a
+              >`,
+            }) || "This redirect is not supported.";
           break;
         case "no_supervisor":
-          error = this.hass.localize(
-            "ui.panel.my.no_supervisor",
-            "docs_link",
-            html`<a
+          error = this.hass.localize("ui.panel.my.no_supervisor", {
+            docs_link: html`<a
               target="_blank"
               rel="noreferrer noopener"
               href=${documentationUrl(this.hass, "/installation")}
               >${this.hass.localize("ui.panel.my.documentation")}</a
-            >`
-          );
+            >`,
+          });
+          break;
+        case "not_app":
+          error = this.hass.localize("ui.panel.my.not_app", {
+            link: html`<a
+              target="_blank"
+              rel="noreferrer noopener"
+              href="https://companion.home-assistant.io/download"
+              >${this.hass.localize("ui.panel.my.download_app")}</a
+            >`,
+          });
           break;
         default:
           error = this.hass.localize("ui.panel.my.error") || "Unknown error";
       }
-      return html`<hass-error-screen .error=${error}></hass-error-screen>`;
+      return html`<hass-error-screen
+        .error=${error}
+        .hass=${this.hass}
+      ></hass-error-screen>`;
     }
-    return html``;
+    return nothing;
   }
 
   private _createRedirectUrl(): string {

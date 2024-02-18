@@ -4,14 +4,15 @@ import {
   html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  nothing,
 } from "lit";
 import { property, state } from "lit/decorators";
-import { LovelaceCardConfig } from "../../../data/lovelace";
+import { LovelaceCardConfig } from "../../../data/lovelace/config/card";
 import { HomeAssistant } from "../../../types";
 import { createCardElement } from "../create-element/create-card-element";
 import { LovelaceCard, LovelaceCardEditor } from "../types";
 import { StackCardConfig } from "./types";
+import { computeRTLDirection } from "../../../common/util/compute_rtl";
 
 export abstract class HuiStackCard<T extends StackCardConfig = StackCardConfig>
   extends LitElement
@@ -28,9 +29,9 @@ export abstract class HuiStackCard<T extends StackCardConfig = StackCardConfig>
 
   @property({ attribute: false }) public hass?: HomeAssistant;
 
-  @property() public editMode?: boolean;
+  @property({ type: Boolean }) public editMode = false;
 
-  @property() protected _cards?: LovelaceCard[];
+  @state() protected _cards?: LovelaceCard[];
 
   @state() protected _config?: T;
 
@@ -68,16 +69,18 @@ export abstract class HuiStackCard<T extends StackCardConfig = StackCardConfig>
     }
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._config || !this._cards) {
-      return html``;
+      return nothing;
     }
 
     return html`
       ${this._config.title
         ? html`<h1 class="card-header">${this._config.title}</h1>`
         : ""}
-      <div id="root">${this._cards}</div>
+      <div id="root" dir=${this.hass ? computeRTLDirection(this.hass) : "ltr"}>
+        ${this._cards}
+      </div>
     `;
   }
 

@@ -1,6 +1,6 @@
 import { html } from "lit";
 import { ConfigEntry } from "../../data/config_entries";
-import { domainToName, IntegrationManifest } from "../../data/integration";
+import { domainToName } from "../../data/integration";
 import {
   createOptionsFlow,
   deleteOptionsFlow,
@@ -8,6 +8,7 @@ import {
   handleOptionsFlowStep,
 } from "../../data/options_flow";
 import {
+  DataEntryFlowDialogParams,
   loadDataEntryFlowDialog,
   showFlowDialog,
 } from "./show-dialog-data-entry-flow";
@@ -17,28 +18,33 @@ export const loadOptionsFlowDialog = loadDataEntryFlowDialog;
 export const showOptionsFlowDialog = (
   element: HTMLElement,
   configEntry: ConfigEntry,
-  manifest?: IntegrationManifest | null
+  dialogParams?: Omit<DataEntryFlowDialogParams, "flowConfig">
 ): void =>
   showFlowDialog(
     element,
     {
       startFlowHandler: configEntry.entry_id,
       domain: configEntry.domain,
-      manifest,
+      ...dialogParams,
     },
     {
+      flowType: "options_flow",
       loadDevicesAndAreas: false,
       createFlow: async (hass, handler) => {
         const [step] = await Promise.all([
           createOptionsFlow(hass, handler),
+          hass.loadFragmentTranslation("config"),
           hass.loadBackendTranslation("options", configEntry.domain),
+          hass.loadBackendTranslation("selector", configEntry.domain),
         ]);
         return step;
       },
       fetchFlow: async (hass, flowId) => {
         const [step] = await Promise.all([
           fetchOptionsFlow(hass, flowId),
+          hass.loadFragmentTranslation("config"),
           hass.loadBackendTranslation("options", configEntry.domain),
+          hass.loadBackendTranslation("selector", configEntry.domain),
         ]);
         return step;
       },
@@ -65,7 +71,8 @@ export const showOptionsFlowDialog = (
       renderShowFormStepHeader(hass, step) {
         return (
           hass.localize(
-            `component.${configEntry.domain}.options.step.${step.step_id}.title`
+            `component.${configEntry.domain}.options.step.${step.step_id}.title`,
+            step.description_placeholders
           ) || hass.localize(`ui.dialogs.options_flow.form.header`)
         );
       },
@@ -103,9 +110,28 @@ export const showOptionsFlowDialog = (
       },
 
       renderShowFormStepFieldError(hass, step, error) {
-        return hass.localize(
-          `component.${configEntry.domain}.options.error.${error}`,
-          step.description_placeholders
+        return (
+          hass.localize(
+            `component.${configEntry.domain}.options.error.${error}`,
+            step.description_placeholders
+          ) || error
+        );
+      },
+
+      renderShowFormStepFieldLocalizeValue(hass, _step, key) {
+        return hass.localize(`component.${configEntry.domain}.selector.${key}`);
+      },
+
+      renderShowFormStepSubmitButton(hass, step) {
+        return (
+          hass.localize(
+            `component.${configEntry.domain}.options.step.${step.step_id}.submit`
+          ) ||
+          hass.localize(
+            `ui.panel.config.integrations.config_flow.${
+              step.last_step === false ? "next" : "submit"
+            }`
+          )
         );
       },
 

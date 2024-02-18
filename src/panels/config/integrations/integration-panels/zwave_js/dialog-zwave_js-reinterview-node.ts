@@ -1,7 +1,7 @@
 import "@material/mwc-button/mwc-button";
 import { mdiCheckCircle, mdiCloseCircle } from "@mdi/js";
 import { UnsubscribeFunc } from "home-assistant-js-websocket";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../../../common/dom/fire_event";
 import "../../../../../components/ha-circular-progress";
@@ -30,9 +30,9 @@ class DialogZWaveJSReinterviewNode extends LitElement {
     this.device_id = params.device_id;
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.device_id) {
-      return html``;
+      return nothing;
     }
 
     return html`
@@ -68,7 +68,7 @@ class DialogZWaveJSReinterviewNode extends LitElement {
         ${this._status === "started"
           ? html`
               <div class="flex-container">
-                <ha-circular-progress active></ha-circular-progress>
+                <ha-circular-progress indeterminate></ha-circular-progress>
                 <div class="status">
                   <p>
                     <b>
@@ -236,6 +236,8 @@ class DialogZWaveJSReinterviewNode extends LitElement {
         .flex-container ha-circular-progress,
         .flex-container ha-svg-icon {
           margin-right: 20px;
+          margin-inline-end: 20px;
+          margin-inline-start: initial;
         }
       `,
     ];

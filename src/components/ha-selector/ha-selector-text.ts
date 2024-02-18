@@ -1,18 +1,22 @@
 import { mdiEye, mdiEyeOff } from "@mdi/js";
-import { css, CSSResultGroup, html, LitElement } from "lit";
+import { CSSResultGroup, LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators";
+import { ensureArray } from "../../common/array/ensure-array";
 import { fireEvent } from "../../common/dom/fire_event";
 import { StringSelector } from "../../data/selector";
 import { HomeAssistant } from "../../types";
 import "../ha-icon-button";
+import "../ha-multi-textfield";
 import "../ha-textarea";
 import "../ha-textfield";
 
 @customElement("ha-selector-text")
 export class HaTextSelector extends LitElement {
-  @property() public hass!: HomeAssistant;
+  @property({ attribute: false }) public hass?: HomeAssistant;
 
   @property() public value?: any;
+
+  @property() public name?: string;
 
   @property() public label?: string;
 
@@ -20,7 +24,7 @@ export class HaTextSelector extends LitElement {
 
   @property() public helper?: string;
 
-  @property() public selector!: StringSelector;
+  @property({ attribute: false }) public selector!: StringSelector;
 
   @property({ type: Boolean }) public disabled = false;
 
@@ -28,9 +32,33 @@ export class HaTextSelector extends LitElement {
 
   @state() private _unmaskedPassword = false;
 
+  public async focus() {
+    await this.updateComplete;
+    (
+      this.renderRoot.querySelector("ha-textarea, ha-textfield") as HTMLElement
+    )?.focus();
+  }
+
   protected render() {
+    if (this.selector.text?.multiple) {
+      return html`
+        <ha-multi-textfield
+          .hass=${this.hass}
+          .value=${ensureArray(this.value ?? [])}
+          .disabled=${this.disabled}
+          .label=${this.label}
+          .inputType=${this.selector.text?.type}
+          .inputSuffix=${this.selector.text?.suffix}
+          .inputPrefix=${this.selector.text?.prefix}
+          .autocomplete=${this.selector.text?.autocomplete}
+          @value-changed=${this._handleChange}
+        >
+        </ha-multi-textfield>
+      `;
+    }
     if (this.selector.text?.multiline) {
       return html`<ha-textarea
+        .name=${this.name}
         .label=${this.label}
         .placeholder=${this.placeholder}
         .value=${this.value || ""}
@@ -39,13 +67,14 @@ export class HaTextSelector extends LitElement {
         .disabled=${this.disabled}
         @input=${this._handleChange}
         autocapitalize="none"
-        .autocomplete=${this.selector.text.autofill}
+        .autocomplete=${this.selector.text?.autocomplete}
         spellcheck="false"
         .required=${this.required}
         autogrow
       ></ha-textarea>`;
     }
     return html`<ha-textfield
+        .name=${this.name}
         .value=${this.value || ""}
         .placeholder=${this.placeholder || ""}
         .helper=${this.helper}
@@ -54,17 +83,22 @@ export class HaTextSelector extends LitElement {
         .type=${this._unmaskedPassword ? "text" : this.selector.text?.type}
         @input=${this._handleChange}
         .label=${this.label || ""}
+        .prefix=${this.selector.text?.prefix}
         .suffix=${this.selector.text?.type === "password"
           ? // reserve some space for the icon.
             html`<div style="width: 24px"></div>`
           : this.selector.text?.suffix}
         .required=${this.required}
-        .autocomplete=${this.selector.text.autofill}
+        .autocomplete=${this.selector.text?.autocomplete}
       ></ha-textfield>
       ${this.selector.text?.type === "password"
         ? html`<ha-icon-button
             toggles
-            .label=${`${this._unmaskedPassword ? "Hide" : "Show"} password`}
+            .label=${this.hass?.localize(
+              this._unmaskedPassword
+                ? "ui.components.selectors.text.hide_password"
+                : "ui.components.selectors.text.show_password"
+            ) || (this._unmaskedPassword ? "Hide password" : "Show password")}
             @click=${this._toggleUnmaskedPassword}
             .path=${this._unmaskedPassword ? mdiEyeOff : mdiEye}
           ></ha-icon-button>`
@@ -76,11 +110,14 @@ export class HaTextSelector extends LitElement {
   }
 
   private _handleChange(ev) {
-    let value = ev.target.value;
+    let value = ev.detail?.value ?? ev.target.value;
     if (this.value === value) {
       return;
     }
-    if (value === "" && !this.required) {
+    if (
+      (value === "" || (Array.isArray(value) && value.length === 0)) &&
+      !this.required
+    ) {
       value = undefined;
     }
 
@@ -99,13 +136,13 @@ export class HaTextSelector extends LitElement {
       }
       ha-icon-button {
         position: absolute;
-        top: 10px;
-        right: 10px;
-        --mdc-icon-button-size: 36px;
+        top: 8px;
+        right: 8px;
+        inset-inline-start: initial;
+        inset-inline-end: 8px;
+        --mdc-icon-button-size: 40px;
         --mdc-icon-size: 20px;
         color: var(--secondary-text-color);
-        inset-inline-start: initial;
-        inset-inline-end: 10px;
         direction: var(--direction);
       }
     `;

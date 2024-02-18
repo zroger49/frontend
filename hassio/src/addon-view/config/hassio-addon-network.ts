@@ -4,7 +4,7 @@ import {
   html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  nothing,
 } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import memoizeOne from "memoize-one";
@@ -47,9 +47,9 @@ class HassioAddonNetwork extends LitElement {
     this._setNetworkConfig();
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._config) {
-      return html``;
+      return nothing;
     }
 
     const hasHiddenOptions = Object.keys(this._config).find(
@@ -180,11 +180,9 @@ class HassioAddonNetwork extends LitElement {
         await suggestAddonRestart(this, this.hass, this.supervisor, this.addon);
       }
     } catch (err: any) {
-      this._error = this.supervisor.localize(
-        "addon.failed_to_reset",
-        "error",
-        extractApiErrorMessage(err)
-      );
+      this._error = this.supervisor.localize("addon.failed_to_reset", {
+        error: extractApiErrorMessage(err),
+      });
       button.actionError();
     }
   }
@@ -220,11 +218,9 @@ class HassioAddonNetwork extends LitElement {
         await suggestAddonRestart(this, this.hass, this.supervisor, this.addon);
       }
     } catch (err: any) {
-      this._error = this.supervisor.localize(
-        "addon.failed_to_save",
-        "error",
-        extractApiErrorMessage(err)
-      );
+      this._error = this.supervisor.localize("addon.failed_to_save", {
+        error: extractApiErrorMessage(err),
+      });
       button.actionError();
     }
   }

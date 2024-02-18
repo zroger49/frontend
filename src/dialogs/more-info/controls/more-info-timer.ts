@@ -1,5 +1,5 @@
 import "@material/mwc-button";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 import "../../../components/ha-attributes";
 import { TimerEntity } from "../../../data/timer";
@@ -9,11 +9,11 @@ import { HomeAssistant } from "../../../types";
 class MoreInfoTimer extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public stateObj?: TimerEntity;
+  @property({ attribute: false }) public stateObj?: TimerEntity;
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.hass || !this.stateObj) {
-      return html``;
+      return nothing;
     }
 
     return html`

@@ -1,24 +1,31 @@
+import "@material/mwc-button/mwc-button";
 import { mdiTransmissionTower } from "@mdi/js";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../../common/dom/fire_event";
+import "../../../../components/entity/ha-entity-picker";
+import "../../../../components/entity/ha-statistic-picker";
 import "../../../../components/ha-dialog";
+import "../../../../components/ha-formfield";
+import "../../../../components/ha-radio";
+import type { HaRadio } from "../../../../components/ha-radio";
 import {
   emptyFlowFromGridSourceEnergyPreference,
   emptyFlowToGridSourceEnergyPreference,
   FlowFromGridSourceEnergyPreference,
   FlowToGridSourceEnergyPreference,
+  energyStatisticHelpUrl,
 } from "../../../../data/energy";
+import {
+  getDisplayUnit,
+  getStatisticMetadata,
+  isExternalStatistic,
+} from "../../../../data/recorder";
+import { getSensorDeviceClassConvertibleUnits } from "../../../../data/sensor";
 import { HassDialog } from "../../../../dialogs/make-dialog-manager";
 import { haStyleDialog } from "../../../../resources/styles";
 import { HomeAssistant } from "../../../../types";
 import { EnergySettingsGridFlowDialogParams } from "./show-dialogs-energy";
-import "@material/mwc-button/mwc-button";
-import "../../../../components/entity/ha-statistic-picker";
-import "../../../../components/ha-radio";
-import "../../../../components/ha-formfield";
-import type { HaRadio } from "../../../../components/ha-radio";
-import "../../../../components/entity/ha-entity-picker";
 
 const energyUnitClasses = ["energy"];
 
@@ -37,7 +44,13 @@ export class DialogEnergyGridFlowSettings
 
   @state() private _costs?: "no-costs" | "number" | "entity" | "statistic";
 
+  @state() private _pickedDisplayUnit?: string | null;
+
+  @state() private _energy_units?: string[];
+
   @state() private _error?: string;
+
+  private _excludeList?: string[];
 
   public async showDialog(
     params: EnergySettingsGridFlowDialogParams
@@ -46,30 +59,79 @@ export class DialogEnergyGridFlowSettings
     this._source = params.source
       ? { ...params.source }
       : params.direction === "from"
-      ? emptyFlowFromGridSourceEnergyPreference()
-      : emptyFlowToGridSourceEnergyPreference();
+        ? emptyFlowFromGridSourceEnergyPreference()
+        : emptyFlowToGridSourceEnergyPreference();
     this._costs = this._source.entity_energy_price
       ? "entity"
       : this._source.number_energy_price
-      ? "number"
-      : this._source[
-          params.direction === "from" ? "stat_cost" : "stat_compensation"
-        ]
-      ? "statistic"
-      : "no-costs";
+        ? "number"
+        : this._source[
+              params.direction === "from" ? "stat_cost" : "stat_compensation"
+            ]
+          ? "statistic"
+          : "no-costs";
+
+    const initialSourceId =
+      this._source[
+        this._params.direction === "from"
+          ? "stat_energy_from"
+          : "stat_energy_to"
+      ];
+
+    this._pickedDisplayUnit = getDisplayUnit(
+      this.hass,
+      initialSourceId,
+      params.metadata
+    );
+    this._energy_units = (
+      await getSensorDeviceClassConvertibleUnits(this.hass, "energy")
+    ).units;
+
+    this._excludeList = [
+      ...(this._params.grid_source?.flow_from?.map(
+        (entry) => entry.stat_energy_from
+      ) || []),
+      ...(this._params.grid_source?.flow_to?.map(
+        (entry) => entry.stat_energy_to
+      ) || []),
+    ].filter((id) => id !== initialSourceId);
   }
 
   public closeDialog(): void {
     this._params = undefined;
     this._source = undefined;
+    this._pickedDisplayUnit = undefined;
     this._error = undefined;
+    this._excludeList = undefined;
     fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._params || !this._source) {
-      return html``;
+      return nothing;
     }
+
+    const pickableUnit = this._energy_units?.join(", ") || "";
+
+    const unitPriceSensor = this._pickedDisplayUnit
+      ? `${this.hass.config.currency}/${this._pickedDisplayUnit}`
+      : undefined;
+
+    const unitPriceFixed = `${this.hass.config.currency}/kWh`;
+
+    const externalSource =
+      this._source[
+        this._params.direction === "from"
+          ? "stat_energy_from"
+          : "stat_energy_to"
+      ] &&
+      isExternalStatistic(
+        this._source[
+          this._params.direction === "from"
+            ? "stat_energy_from"
+            : "stat_energy_to"
+        ]
+      );
 
     return html`
       <ha-dialog
@@ -85,13 +147,22 @@ export class DialogEnergyGridFlowSettings
       >
         ${this._error ? html`<p class="error">${this._error}</p>` : ""}
         <div>
-          ${this.hass.localize(
-            `ui.panel.config.energy.grid.flow_dialog.${this._params.direction}.paragraph`
-          )}
+          <p>
+            ${this.hass.localize(
+              `ui.panel.config.energy.grid.flow_dialog.${this._params.direction}.paragraph`
+            )}
+          </p>
+          <p>
+            ${this.hass.localize(
+              `ui.panel.config.energy.grid.flow_dialog.${this._params.direction}.entity_para`,
+              { unit: pickableUnit }
+            )}
+          </p>
         </div>
 
         <ha-statistic-picker
           .hass=${this.hass}
+          .helpMissingEntityUrl=${energyStatisticHelpUrl}
           .includeUnitClass=${energyUnitClasses}
           .value=${this._source[
             this._params.direction === "from"
@@ -101,6 +172,7 @@ export class DialogEnergyGridFlowSettings
           .label=${this.hass.localize(
             `ui.panel.config.energy.grid.flow_dialog.${this._params.direction}.energy_stat`
           )}
+          .excludeStatistics=${this._excludeList}
           @value-changed=${this._statisticChanged}
           dialogInitialFocus
         ></ha-statistic-picker>
@@ -145,9 +217,9 @@ export class DialogEnergyGridFlowSettings
                   ? "stat_cost"
                   : "stat_compensation"
               ]}
-              .label=${this.hass.localize(
+              .label=${`${this.hass.localize(
                 `ui.panel.config.energy.grid.flow_dialog.${this._params.direction}.cost_stat_input`
-              )}
+              )} (${this.hass.config.currency})`}
               @value-changed=${this._priceStatChanged}
             ></ha-statistic-picker>`
           : ""}
@@ -160,6 +232,7 @@ export class DialogEnergyGridFlowSettings
             value="entity"
             name="costs"
             .checked=${this._costs === "entity"}
+            .disabled=${externalSource}
             @change=${this._handleCostChanged}
           ></ha-radio>
         </ha-formfield>
@@ -169,9 +242,9 @@ export class DialogEnergyGridFlowSettings
               .hass=${this.hass}
               include-domains='["sensor", "input_number"]'
               .value=${this._source.entity_energy_price}
-              .label=${this.hass.localize(
+              .label=${`${this.hass.localize(
                 `ui.panel.config.energy.grid.flow_dialog.${this._params.direction}.cost_entity_input`
-              )}
+              )} ${unitPriceSensor ? ` (${unitPriceSensor})` : ""}`}
               @value-changed=${this._priceEntityChanged}
             ></ha-entity-picker>`
           : ""}
@@ -184,22 +257,20 @@ export class DialogEnergyGridFlowSettings
             value="number"
             name="costs"
             .checked=${this._costs === "number"}
+            .disabled=${externalSource}
             @change=${this._handleCostChanged}
           ></ha-radio>
         </ha-formfield>
         ${this._costs === "number"
           ? html`<ha-textfield
-              .label=${this.hass.localize(
+              .label=${`${this.hass.localize(
                 `ui.panel.config.energy.grid.flow_dialog.${this._params.direction}.cost_number_input`
-              )}
+              )} (${unitPriceFixed})`}
               class="price-options"
-              step=".01"
+              step="any"
               type="number"
               .value=${this._source.number_energy_price}
-              .suffix=${this.hass.localize(
-                `ui.panel.config.energy.grid.flow_dialog.${this._params.direction}.cost_number_suffix`,
-                { currency: this.hass.config.currency }
-              )}
+              .suffix=${unitPriceFixed}
               @change=${this._numberPriceChanged}
             >
             </ha-textfield>`
@@ -261,7 +332,17 @@ export class DialogEnergyGridFlowSettings
     };
   }
 
-  private _statisticChanged(ev: CustomEvent<{ value: string }>) {
+  private async _statisticChanged(ev: CustomEvent<{ value: string }>) {
+    if (ev.detail.value) {
+      const metadata = await getStatisticMetadata(this.hass, [ev.detail.value]);
+      this._pickedDisplayUnit = getDisplayUnit(
+        this.hass,
+        ev.detail.value,
+        metadata[0]
+      );
+    } else {
+      this._pickedDisplayUnit = undefined;
+    }
     this._source = {
       ...this._source!,
       [this._params!.direction === "from"
@@ -297,6 +378,8 @@ export class DialogEnergyGridFlowSettings
         .price-options {
           display: block;
           padding-left: 52px;
+          padding-inline-start: 52px;
+          padding-inline-end: initial;
           margin-top: -8px;
         }
       `,

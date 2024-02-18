@@ -1,7 +1,5 @@
-import "@material/mwc-button/mwc-button";
 import "@material/mwc-linear-progress/mwc-linear-progress";
 import type { LinearProgress } from "@material/mwc-linear-progress/mwc-linear-progress";
-import "@material/mwc-list/mwc-list-item";
 import {
   mdiChevronDown,
   mdiMonitor,
@@ -11,14 +9,13 @@ import {
   mdiStop,
   mdiVolumeHigh,
 } from "@mdi/js";
-import { UnsubscribeFunc } from "home-assistant-js-websocket";
 import {
-  css,
   CSSResultGroup,
-  html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  css,
+  html,
+  nothing,
 } from "lit";
 import { customElement, property, query, state } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
@@ -27,30 +24,30 @@ import { fireEvent } from "../../common/dom/fire_event";
 import { computeDomain } from "../../common/entity/compute_domain";
 import { computeStateDomain } from "../../common/entity/compute_state_domain";
 import { computeStateName } from "../../common/entity/compute_state_name";
-import { domainIcon } from "../../common/entity/domain_icon";
 import { supportsFeature } from "../../common/entity/supports-feature";
+import { debounce } from "../../common/util/debounce";
+import "../../components/ha-button";
 import "../../components/ha-button-menu";
 import "../../components/ha-circular-progress";
+import "../../components/ha-domain-icon";
 import "../../components/ha-icon-button";
+import "../../components/ha-list-item";
+import "../../components/ha-state-icon";
+import "../../components/ha-svg-icon";
 import { UNAVAILABLE } from "../../data/entity";
-import { subscribeEntityRegistry } from "../../data/entity_registry";
 import {
   BROWSER_PLAYER,
+  ControlButton,
+  MediaPlayerEntity,
+  MediaPlayerEntityFeature,
+  MediaPlayerItem,
   cleanupMediaTitle,
   computeMediaControls,
   computeMediaDescription,
-  ControlButton,
   formatMediaTime,
   getCurrentProgress,
   handleMediaControlClick,
-  MediaPlayerEntity,
-  MediaPlayerItem,
   setMediaPlayerVolume,
-  SUPPORT_BROWSE_MEDIA,
-  SUPPORT_PAUSE,
-  SUPPORT_PLAY,
-  SUPPORT_STOP,
-  SUPPORT_VOLUME_SET,
 } from "../../data/media-player";
 import { ResolvedMediaSource } from "../../data/media_source";
 import { showAlertDialog } from "../../dialogs/generic/show-dialog-box";
@@ -74,8 +71,7 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
 
   @property({ attribute: false }) public entityId!: string;
 
-  @property({ type: Boolean, reflect: true })
-  public narrow!: boolean;
+  @property({ type: Boolean, reflect: true }) public narrow = false;
 
   @query("mwc-linear-progress") private _progressBar?: LinearProgress;
 
@@ -86,9 +82,6 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
   @state() private _newMediaExpected = false;
 
   @state() private _browserPlayer?: BrowserMediaPlayer;
-
-  @state()
-  private _hiddenEntities = new Set<string>();
 
   private _progressInterval?: number;
 
@@ -116,6 +109,7 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
   }
 
   public disconnectedCallback(): void {
+    super.disconnectedCallback();
     if (this._progressInterval) {
       clearInterval(this._progressInterval);
       this._progressInterval = undefined;
@@ -126,7 +120,13 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
   public showResolvingNewMediaPicked() {
     this._tearDownBrowserPlayer();
     this._newMediaExpected = true;
+    // Sometimes the state does not update when playing media, like with TTS, so we wait max 2 secs and then stop waiting
+    this._debouncedResetMediaExpected();
   }
+
+  private _debouncedResetMediaExpected = debounce(() => {
+    this._newMediaExpected = false;
+  }, 2000);
 
   public hideResolvingNewMediaPicked() {
     this._newMediaExpected = false;
@@ -159,14 +159,19 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
     this._newMediaExpected = false;
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (this._newMediaExpected) {
       return html`
-        <div class="controls-progress">
+        <div class="controls-progress buffering">
           ${until(
             // Only show spinner after 500ms
-            new Promise((resolve) => setTimeout(resolve, 500)).then(
-              () => html`<ha-circular-progress active></ha-circular-progress>`
+            new Promise((resolve) => {
+              setTimeout(resolve, 500);
+            }).then(
+              () =>
+                html`<ha-circular-progress
+                  indeterminate
+                ></ha-circular-progress>`
             )
           )}
         </div>
@@ -183,36 +188,36 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
     const controls: ControlButton[] | undefined = !this.narrow
       ? computeMediaControls(stateObj, true)
       : (stateObj.state === "playing" &&
-          (supportsFeature(stateObj, SUPPORT_PAUSE) ||
-            supportsFeature(stateObj, SUPPORT_STOP))) ||
-        ((stateObj.state === "paused" || stateObj.state === "idle") &&
-          supportsFeature(stateObj, SUPPORT_PLAY)) ||
-        (stateObj.state === "on" &&
-          (supportsFeature(stateObj, SUPPORT_PLAY) ||
-            supportsFeature(stateObj, SUPPORT_PAUSE)))
-      ? [
-          {
-            icon:
-              stateObj.state === "on"
-                ? mdiPlayPause
-                : stateObj.state !== "playing"
-                ? mdiPlay
-                : supportsFeature(stateObj, SUPPORT_PAUSE)
-                ? mdiPause
-                : mdiStop,
-            action:
-              stateObj.state !== "playing"
-                ? "media_play"
-                : supportsFeature(stateObj, SUPPORT_PAUSE)
-                ? "media_pause"
-                : "media_stop",
-          },
-        ]
-      : undefined;
+            (supportsFeature(stateObj, MediaPlayerEntityFeature.PAUSE) ||
+              supportsFeature(stateObj, MediaPlayerEntityFeature.STOP))) ||
+          ((stateObj.state === "paused" || stateObj.state === "idle") &&
+            supportsFeature(stateObj, MediaPlayerEntityFeature.PLAY)) ||
+          (stateObj.state === "on" &&
+            (supportsFeature(stateObj, MediaPlayerEntityFeature.PLAY) ||
+              supportsFeature(stateObj, MediaPlayerEntityFeature.PAUSE)))
+        ? [
+            {
+              icon:
+                stateObj.state === "on"
+                  ? mdiPlayPause
+                  : stateObj.state !== "playing"
+                    ? mdiPlay
+                    : supportsFeature(stateObj, MediaPlayerEntityFeature.PAUSE)
+                      ? mdiPause
+                      : mdiStop,
+              action:
+                stateObj.state !== "playing"
+                  ? "media_play"
+                  : supportsFeature(stateObj, MediaPlayerEntityFeature.PAUSE)
+                    ? "media_pause"
+                    : "media_stop",
+            },
+          ]
+        : undefined;
     const mediaDescription = computeMediaDescription(stateObj);
     const mediaDuration = formatMediaTime(stateObj.attributes.media_duration);
     const mediaTitleClean = cleanupMediaTitle(
-      stateObj.attributes.media_title || ""
+      stateObj.attributes.media_title || stateObj.attributes.media_content_id
     );
     const mediaArt =
       stateObj.attributes.entity_picture_local ||
@@ -227,12 +232,13 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
         })}
         @click=${this._openMoreInfo}
       >
-        ${mediaArt ? html`<img src=${this.hass.hassUrl(mediaArt)} />` : ""}
+        ${mediaArt
+          ? html`<img alt="" src=${this.hass.hassUrl(mediaArt)} />`
+          : ""}
         <div class="media-info">
           <hui-marquee
             .text=${mediaTitleClean ||
             mediaDescription ||
-            cleanupMediaTitle(stateObj.attributes.media_content_id) ||
             (stateObj.state !== "playing" && stateObj.state !== "on"
               ? this.hass.localize(`ui.card.media_player.nothing_playing`)
               : "")}
@@ -245,9 +251,13 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
           </span>
         </div>
       </div>
-      <div class="controls-progress">
-        ${this._browserPlayer?.buffering
-          ? html` <ha-circular-progress active></ha-circular-progress> `
+      <div
+        class="controls-progress ${stateObj.state === "buffering"
+          ? "buffering"
+          : ""}"
+      >
+        ${stateObj.state === "buffering"
+          ? html`<ha-circular-progress indeterminate></ha-circular-progress> `
           : html`
               <div class="controls">
                 ${controls === undefined
@@ -267,16 +277,16 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
                     )}
               </div>
               ${stateObj.attributes.media_duration === Infinity
-                ? html``
+                ? nothing
                 : this.narrow
-                ? html`<mwc-linear-progress></mwc-linear-progress>`
-                : html`
-                    <div class="progress">
-                      <div id="CurrentProgress"></div>
-                      <mwc-linear-progress wide></mwc-linear-progress>
-                      <div>${mediaDuration}</div>
-                    </div>
-                  `}
+                  ? html`<mwc-linear-progress></mwc-linear-progress>`
+                  : html`
+                      <div class="progress">
+                        <div id="CurrentProgress"></div>
+                        <mwc-linear-progress wide></mwc-linear-progress>
+                        <div>${mediaDuration}</div>
+                      </div>
+                    `}
             `}
       </div>
       ${this._renderChoosePlayer(stateObj)}
@@ -290,14 +300,15 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
       ${
         !this.narrow &&
         stateObj &&
-        supportsFeature(stateObj, SUPPORT_VOLUME_SET)
+        supportsFeature(stateObj, MediaPlayerEntityFeature.VOLUME_SET)
           ? html`
-              <ha-button-menu corner="BOTTOM_START" y="0" x="76">
+              <ha-button-menu y="0" x="76">
                 <ha-icon-button
                   slot="trigger"
                   .path=${mdiVolumeHigh}
                 ></ha-icon-button>
                 <ha-slider
+                  labeled
                   min="0"
                   max="100"
                   step="1"
@@ -310,22 +321,19 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
           : ""
       }
 
-          <ha-button-menu corner="BOTTOM_START">
+          <ha-button-menu>
             ${
               this.narrow
                 ? html`
-                    <ha-icon-button
-                      slot="trigger"
-                      .path=${isBrowser
-                        ? mdiMonitor
-                        : domainIcon(computeDomain(this.entityId), stateObj)}
-                    ></ha-icon-button>
+                    <ha-icon-button slot="trigger">
+                      ${this._renderIcon(isBrowser, stateObj)}
+                    </ha-icon-button>
                   `
                 : html`
-                    <mwc-button
+                    <ha-button
                       slot="trigger"
                       .label=${this.narrow
-                        ? ""
+                        ? nothing
                         : `${
                             stateObj
                               ? computeStateName(stateObj)
@@ -333,42 +341,56 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
                           }
                 `}
                     >
-                      <ha-svg-icon
-                        slot="icon"
-                        .path=${isBrowser
-                          ? mdiMonitor
-                          : domainIcon(computeDomain(this.entityId), stateObj)}
-                      ></ha-svg-icon>
+                      <span slot="icon">
+                        ${this._renderIcon(isBrowser, stateObj)}
+                      </span>
                       <ha-svg-icon
                         slot="trailingIcon"
                         .path=${mdiChevronDown}
                       ></ha-svg-icon>
-                    </mwc-button>
+                    </ha-button>
                   `
             }
-            <mwc-list-item
+            <ha-list-item
               .player=${BROWSER_PLAYER}
               ?selected=${isBrowser}
               @click=${this._selectPlayer}
             >
               ${this.hass.localize("ui.components.media-browser.web-browser")}
-            </mwc-list-item>
+            </ha-list-item>
             ${this._mediaPlayerEntities.map(
               (source) => html`
-                <mwc-list-item
+                <ha-list-item
                   ?selected=${source.entity_id === this.entityId}
                   .disabled=${source.state === UNAVAILABLE}
                   .player=${source.entity_id}
                   @click=${this._selectPlayer}
                 >
                   ${computeStateName(source)}
-                </mwc-list-item>
+                </ha-list-item>
               `
             )}
           </ha-button-menu>
         </div>
       </div>
 
+    `;
+  }
+
+  private _renderIcon(isBrowser: boolean, stateObj?: MediaPlayerEntity) {
+    if (isBrowser) {
+      return html`<ha-svg-icon .path=${mdiMonitor}></ha-svg-icon>`;
+    }
+    if (stateObj) {
+      return html`
+        <ha-state-icon .hass=${this.hass} .stateObj=${stateObj}></ha-state-icon>
+      `;
+    }
+    return html`
+      <ha-domain-icon
+        .hass=${this.hass}
+        .domain=${computeDomain(this.entityId)}
+      ></ha-domain-icon>
     `;
   }
 
@@ -468,8 +490,8 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
     return Object.values(this.hass!.states).filter(
       (entity) =>
         computeStateDomain(entity) === "media_player" &&
-        supportsFeature(entity, SUPPORT_BROWSE_MEDIA) &&
-        !this._hiddenEntities.has(entity.entity_id)
+        supportsFeature(entity, MediaPlayerEntityFeature.BROWSE_MEDIA) &&
+        !this.hass.entities[entity.entity_id]?.hidden
     );
   }
 
@@ -493,28 +515,6 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
     if (this._currentProgress) {
       this._currentProgress.innerHTML = formatMediaTime(currentProgress);
     }
-  }
-
-  protected override hassSubscribe(): (
-    | UnsubscribeFunc
-    | Promise<UnsubscribeFunc>
-  )[] {
-    return [
-      subscribeEntityRegistry(this.hass.connection, (entries) => {
-        const hiddenEntities = new Set<string>();
-
-        for (const entry of entries) {
-          if (
-            entry.hidden_by &&
-            computeDomain(entry.entity_id) === "media_player"
-          ) {
-            hiddenEntities.add(entry.entity_id);
-          }
-        }
-
-        this._hiddenEntities = hiddenEntities;
-      }),
-    ];
   }
 
   private _handleControlClick(e: MouseEvent): void {
@@ -567,7 +567,8 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
     return css`
       :host {
         display: flex;
-        min-height: 100px;
+        height: 100px;
+        box-sizing: border-box;
         background: var(
           --ha-card-background,
           var(--card-background-color, white)
@@ -582,9 +583,10 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
         --mdc-theme-primary: var(--secondary-text-color);
       }
 
-      mwc-button[slot="trigger"] {
+      ha-button-menu ha-button[slot="trigger"] {
+        line-height: 1;
         --mdc-theme-primary: var(--primary-text-color);
-        --mdc-icon-size: 36px;
+        --mdc-icon-size: 16px;
       }
 
       .info {
@@ -593,6 +595,9 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
         align-items: center;
         width: 100%;
         margin-right: 16px;
+        margin-inline-end: 16px;
+        margin-inline-start: initial;
+
         text-overflow: ellipsis;
         white-space: nowrap;
         overflow: hidden;
@@ -644,6 +649,8 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
         white-space: nowrap;
         overflow: hidden;
         padding-left: 16px;
+        padding-inline-start: 16px;
+        padding-inline-end: initial;
         width: 100%;
       }
 
@@ -653,22 +660,16 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
       }
 
       img {
-        max-height: 100px;
-        max-width: 100px;
+        height: 100%;
       }
 
       .app img {
-        max-height: 68px;
+        height: 68px;
         margin: 16px 0 16px 16px;
       }
 
-      ha-button-menu mwc-button {
-        line-height: 1;
-      }
-
       :host([narrow]) {
-        min-height: 56px;
-        max-height: 56px;
+        height: 57px;
       }
 
       :host([narrow]) .controls-progress {
@@ -676,8 +677,14 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
         min-width: 48px;
       }
 
+      :host([narrow]) .controls-progress.buffering {
+        flex: 1;
+      }
+
       :host([narrow]) .media-info {
         padding-left: 8px;
+        padding-inline-start: 8px;
+        padding-inline-end: initial;
       }
 
       :host([narrow]) .controls {
@@ -689,6 +696,8 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
       :host([narrow]) .choose-player {
         padding-left: 0;
         padding-right: 8px;
+        padding-inline-start: 0;
+        padding-inline-end: 8px;
         min-width: 48px;
         flex: unset;
         justify-content: center;
@@ -698,16 +707,6 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
         justify-content: flex-end;
       }
 
-      :host([narrow]) img {
-        max-height: 56px;
-        max-width: 56px;
-      }
-
-      :host([narrow]) .blank-image {
-        height: 56px;
-        width: 56px;
-      }
-
       :host([narrow]) mwc-linear-progress {
         padding: 0;
         position: absolute;
@@ -715,15 +714,15 @@ export class BarMediaPlayer extends SubscribeMixin(LitElement) {
         left: 0;
       }
 
-      mwc-list-item[selected] {
+      ha-list-item[selected] {
         font-weight: bold;
       }
 
-      ha-svg-icon[slot="icon"] {
-        margin-inline-start: 8px !important;
-        margin-inline-end: 8px !important;
-        direction: var(--direction);
+      span[slot="icon"] {
+        display: flex;
+        align-items: center;
       }
+
       ha-svg-icon[slot="trailingIcon"] {
         margin-inline-start: 8px !important;
         margin-inline-end: 0px !important;

@@ -15,12 +15,13 @@ import {
 } from "../../../../../../data/zwave_js";
 import { showConfirmationDialog } from "../../../../../../dialogs/generic/show-dialog-box";
 import type { HomeAssistant } from "../../../../../../types";
-import { showZWaveJSHealNodeDialog } from "../../../../integrations/integration-panels/zwave_js/show-dialog-zwave_js-heal-node";
+import { showZWaveJSRebuildNodeRoutesDialog } from "../../../../integrations/integration-panels/zwave_js/show-dialog-zwave_js-rebuild-node-routes";
 import { showZWaveJSNodeStatisticsDialog } from "../../../../integrations/integration-panels/zwave_js/show-dialog-zwave_js-node-statistics";
 import { showZWaveJSReinterviewNodeDialog } from "../../../../integrations/integration-panels/zwave_js/show-dialog-zwave_js-reinterview-node";
 import { showZWaveJSRemoveFailedNodeDialog } from "../../../../integrations/integration-panels/zwave_js/show-dialog-zwave_js-remove-failed-node";
-import { showZWaveJUpdateFirmwareNodeDialog } from "../../../../integrations/integration-panels/zwave_js/show-dialog-zwave_js-update-firmware-node";
+import { showZWaveJSUpdateFirmwareNodeDialog } from "../../../../integrations/integration-panels/zwave_js/show-dialog-zwave_js-update-firmware-node";
 import type { DeviceAction } from "../../../ha-config-device-page";
+import { showZWaveJSHardResetControllerDialog } from "../../../../integrations/integration-panels/zwave_js/show-dialog-zwave_js-hard-reset-controller";
 
 export const getZwaveDeviceActions = async (
   el: HTMLElement,
@@ -43,59 +44,70 @@ export const getZwaveDeviceActions = async (
 
   const nodeStatus = await fetchZwaveNodeStatus(hass, device.id);
 
-  if (!nodeStatus || nodeStatus.is_controller_node) {
+  if (!nodeStatus) {
     return [];
   }
 
-  const actions = [
-    {
-      label: hass.localize(
-        "ui.panel.config.zwave_js.device_info.device_config"
-      ),
-      icon: mdiCog,
-      href: `/config/zwave_js/node_config/${device.id}?config_entry=${entryId}`,
-    },
-    {
-      label: hass.localize(
-        "ui.panel.config.zwave_js.device_info.reinterview_device"
-      ),
-      icon: mdiChatQuestion,
-      action: () =>
-        showZWaveJSReinterviewNodeDialog(el, {
-          device_id: device.id,
-        }),
-    },
-    {
-      label: hass.localize("ui.panel.config.zwave_js.device_info.heal_node"),
-      icon: mdiHospitalBox,
-      action: () =>
-        showZWaveJSHealNodeDialog(el, {
-          device,
-        }),
-    },
-    {
-      label: hass.localize(
-        "ui.panel.config.zwave_js.device_info.remove_failed"
-      ),
-      icon: mdiDeleteForever,
-      action: () =>
-        showZWaveJSRemoveFailedNodeDialog(el, {
-          device_id: device.id,
-        }),
-    },
-    {
-      label: hass.localize(
-        "ui.panel.config.zwave_js.device_info.node_statistics"
-      ),
-      icon: mdiInformation,
-      action: () =>
-        showZWaveJSNodeStatisticsDialog(el, {
-          device,
-        }),
-    },
-  ];
+  const actions: DeviceAction[] = [];
 
-  if (!nodeStatus.ready) {
+  if (!nodeStatus.is_controller_node) {
+    actions.push(
+      {
+        label: hass.localize(
+          "ui.panel.config.zwave_js.device_info.device_config"
+        ),
+        icon: mdiCog,
+        href: `/config/zwave_js/node_config/${device.id}?config_entry=${entryId}`,
+      },
+      {
+        label: hass.localize(
+          "ui.panel.config.zwave_js.device_info.reinterview_device"
+        ),
+        icon: mdiChatQuestion,
+        action: () =>
+          showZWaveJSReinterviewNodeDialog(el, {
+            device_id: device.id,
+          }),
+      },
+      {
+        label: hass.localize(
+          "ui.panel.config.zwave_js.device_info.rebuild_routes"
+        ),
+        icon: mdiHospitalBox,
+        action: () =>
+          showZWaveJSRebuildNodeRoutesDialog(el, {
+            device,
+          }),
+      },
+      {
+        label: hass.localize(
+          "ui.panel.config.zwave_js.device_info.remove_failed"
+        ),
+        icon: mdiDeleteForever,
+        action: () =>
+          showZWaveJSRemoveFailedNodeDialog(el, {
+            device_id: device.id,
+          }),
+      },
+      {
+        label: hass.localize(
+          "ui.panel.config.zwave_js.device_info.node_statistics"
+        ),
+        icon: mdiInformation,
+        action: () =>
+          showZWaveJSNodeStatisticsDialog(el, {
+            device,
+          }),
+      }
+    );
+  }
+
+  if (
+    !(
+      nodeStatus.ready &&
+      (nodeStatus.is_controller_node || nodeStatus.has_firmware_update_cc)
+    )
+  ) {
     return actions;
   }
 
@@ -117,16 +129,32 @@ export const getZwaveDeviceActions = async (
           (await fetchZwaveIsNodeFirmwareUpdateInProgress(hass, device.id)) ||
           (await showConfirmationDialog(el, {
             text: hass.localize(
-              "ui.panel.config.zwave_js.update_firmware.warning"
+              `ui.panel.config.zwave_js.update_firmware.${
+                nodeStatus.is_controller_node ? "warning_controller" : "warning"
+              }`
             ),
             dismissText: hass.localize("ui.common.no"),
             confirmText: hass.localize("ui.common.yes"),
           }))
         ) {
-          showZWaveJUpdateFirmwareNodeDialog(el, {
+          showZWaveJSUpdateFirmwareNodeDialog(el, {
             device,
           });
         }
+      },
+    });
+  }
+
+  if (nodeStatus.is_controller_node) {
+    actions.push({
+      label: hass.localize(
+        "ui.panel.config.zwave_js.device_info.hard_reset_controller"
+      ),
+      icon: mdiDeleteForever,
+      action: async () => {
+        showZWaveJSHardResetControllerDialog(el, {
+          entryId,
+        });
       },
     });
   }

@@ -1,18 +1,12 @@
 import { mdiChevronLeft, mdiChevronRight } from "@mdi/js";
+import { customElement, property } from "lit/decorators";
+import { mainWindow } from "../common/dom/get_main_window";
 import { HaSvgIcon } from "./ha-svg-icon";
 
+@customElement("ha-icon-next")
 export class HaIconNext extends HaSvgIcon {
-  public connectedCallback() {
-    super.connectedCallback();
-
-    // wait to check for direction since otherwise direction is wrong even though top level is RTL
-    setTimeout(() => {
-      this.path =
-        window.getComputedStyle(this).direction === "ltr"
-          ? mdiChevronRight
-          : mdiChevronLeft;
-    }, 100);
-  }
+  @property() public override path =
+    mainWindow.document.dir === "rtl" ? mdiChevronLeft : mdiChevronRight;
 }
 
 declare global {
@@ -20,5 +14,3 @@ declare global {
     "ha-icon-next": HaIconNext;
   }
 }
-
-customElements.define("ha-icon-next", HaIconNext);

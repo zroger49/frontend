@@ -1,5 +1,5 @@
 import "@material/mwc-list/mwc-list-item";
-import { css, html, LitElement, PropertyValues } from "lit";
+import { css, html, LitElement, PropertyValues, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../../../common/dom/fire_event";
 import { caseInsensitiveStringCompare } from "../../../../../common/string/compare";
@@ -13,7 +13,7 @@ import { TriggerElement } from "../ha-automation-trigger-row";
 export class HaTagTrigger extends LitElement implements TriggerElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public trigger!: TagTrigger;
+  @property({ attribute: false }) public trigger!: TagTrigger;
 
   @property({ type: Boolean }) public disabled = false;
 
@@ -30,7 +30,7 @@ export class HaTagTrigger extends LitElement implements TriggerElement {
 
   protected render() {
     if (!this._tags) {
-      return html``;
+      return nothing;
     }
     return html`
       <ha-select
@@ -54,7 +54,11 @@ export class HaTagTrigger extends LitElement implements TriggerElement {
 
   private async _fetchTags() {
     this._tags = (await fetchTags(this.hass)).sort((a, b) =>
-      caseInsensitiveStringCompare(a.name || a.id, b.name || b.id)
+      caseInsensitiveStringCompare(
+        a.name || a.id,
+        b.name || b.id,
+        this.hass.locale.language
+      )
     );
   }
 

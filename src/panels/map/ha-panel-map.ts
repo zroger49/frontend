@@ -1,44 +1,47 @@
 import { mdiPencil } from "@mdi/js";
-import "@polymer/app-layout/app-toolbar/app-toolbar";
 import { css, CSSResultGroup, html, LitElement, PropertyValues } from "lit";
-import { property } from "lit/decorators";
+import { customElement, property } from "lit/decorators";
 import { computeStateDomain } from "../../common/entity/compute_state_domain";
 import { navigate } from "../../common/navigate";
-import "../../components/ha-menu-button";
 import "../../components/ha-icon-button";
+import "../../components/ha-menu-button";
+import "../../components/ha-top-app-bar-fixed";
 import "../../components/map/ha-map";
-import "../../layouts/ha-app-layout";
 import { haStyle } from "../../resources/styles";
 import { HomeAssistant } from "../../types";
 
+@customElement("ha-panel-map")
 class HaPanelMap extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property({ type: Boolean }) public narrow!: boolean;
+  @property({ type: Boolean }) public narrow = false;
 
   private _entities: string[] = [];
 
   protected render() {
     return html`
-      <ha-app-layout>
-        <app-header fixed slot="header">
-          <app-toolbar>
-            <ha-menu-button
-              .hass=${this.hass}
-              .narrow=${this.narrow}
-            ></ha-menu-button>
-            <div main-title>${this.hass.localize("panel.map")}</div>
-            ${!__DEMO__ && this.hass.user?.is_admin
-              ? html` <ha-icon-button
-                  .label=${this.hass!.localize("ui.panel.map.edit_zones")}
-                  .path=${mdiPencil}
-                  @click=${this._openZonesEditor}
-                ></ha-icon-button>`
-              : ""}
-          </app-toolbar>
-        </app-header>
-        <ha-map .hass=${this.hass} .entities=${this._entities} autoFit></ha-map>
-      </ha-app-layout>
+      <ha-top-app-bar-fixed>
+        <ha-menu-button
+          slot="navigationIcon"
+          .hass=${this.hass}
+          .narrow=${this.narrow}
+        ></ha-menu-button>
+        <div slot="title">${this.hass.localize("panel.map")}</div>
+        ${!__DEMO__ && this.hass.user?.is_admin
+          ? html`<ha-icon-button
+              slot="actionItems"
+              .label=${this.hass!.localize("ui.panel.map.edit_zones")}
+              .path=${mdiPencil}
+              @click=${this._openZonesEditor}
+            ></ha-icon-button>`
+          : ""}
+        <ha-map
+          .hass=${this.hass}
+          .entities=${this._entities}
+          autoFit
+          interactiveZones
+        ></ha-map>
+      </ha-top-app-bar-fixed>
     `;
   }
 
@@ -94,8 +97,6 @@ class HaPanelMap extends LitElement {
     ];
   }
 }
-
-customElements.define("ha-panel-map", HaPanelMap);
 
 declare global {
   interface HTMLElementTagNameMap {

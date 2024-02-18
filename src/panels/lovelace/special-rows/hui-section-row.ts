@@ -1,4 +1,4 @@
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators";
 import { HomeAssistant } from "../../../types";
 import { LovelaceRow, SectionConfig } from "../entity-rows/types";
@@ -17,9 +17,9 @@ class HuiSectionRow extends LitElement implements LovelaceRow {
     this._config = config;
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._config) {
-      return html``;
+      return nothing;
     }
 
     return html`
@@ -30,7 +30,7 @@ class HuiSectionRow extends LitElement implements LovelaceRow {
               ${this._config.label}
             </div>
           `
-        : html``}
+        : nothing}
     `;
   }
 
@@ -39,6 +39,8 @@ class HuiSectionRow extends LitElement implements LovelaceRow {
       .label {
         color: var(--section-header-text-color, var(--primary-text-color));
         margin-left: 8px;
+        margin-inline-start: 8px;
+        margin-inline-end: initial;
         margin-bottom: 8px;
         margin-top: 16px;
         font-weight: 500;
@@ -48,6 +50,8 @@ class HuiSectionRow extends LitElement implements LovelaceRow {
         background-color: var(--entities-divider-color, var(--divider-color));
         margin-left: -16px;
         margin-right: -16px;
+        margin-inline-start: -16px;
+        margin-inline-end: -16px;
         margin-top: 8px;
       }
     `;

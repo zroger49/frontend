@@ -1,10 +1,11 @@
 import "@material/mwc-button";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { CSSResultGroup, LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../common/dom/fire_event";
 import "../../../components/ha-alert";
 import { createCloseHeading } from "../../../components/ha-dialog";
 import "../../../components/ha-formfield";
+import "../../../components/ha-qr-code";
 import "../../../components/ha-switch";
 import "../../../components/ha-textfield";
 import { Tag, UpdateTagParams } from "../../../data/tag";
@@ -13,7 +14,7 @@ import { haStyleDialog } from "../../../resources/styles";
 import { HomeAssistant } from "../../../types";
 import { TagDetailDialogParams } from "./show-dialog-tag-detail";
 
-const QR_LOGO_URL = "/static/icons/favicon-192x192.png";
+const TAG_BASE = "https://www.home-assistant.io/tag/";
 
 @customElement("dialog-tag-detail")
 class DialogTagDetail
@@ -32,8 +33,6 @@ class DialogTagDetail
 
   @state() private _submitting = false;
 
-  @state() private _qrCode?: TemplateResult;
-
   public showDialog(params: TagDetailDialogParams): void {
     this._params = params;
     this._error = undefined;
@@ -43,19 +42,16 @@ class DialogTagDetail
       this._id = "";
       this._name = "";
     }
-
-    this._generateQR();
   }
 
   public closeDialog(): void {
     this._params = undefined;
-    this._qrCode = undefined;
     fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._params) {
-      return html``;
+      return nothing;
     }
 
     return html`
@@ -88,15 +84,14 @@ class DialogTagDetail
               .configValue=${"name"}
               @input=${this._valueChanged}
               .label=${this.hass!.localize("ui.panel.config.tag.detail.name")}
-              .errorMessage=${this.hass!.localize(
+              .validationMessage=${this.hass!.localize(
                 "ui.panel.config.tag.detail.required_error_msg"
               )}
               required
-              auto-validate
             ></ha-textfield>
             ${!this._params.entry
               ? html`<ha-textfield
-                  .value=${this._id}
+                  .value=${this._id || ""}
                   .configValue=${"id"}
                   @input=${this._valueChanged}
                   .label=${this.hass!.localize(
@@ -112,23 +107,27 @@ class DialogTagDetail
             ? html`
                 <div>
                   <p>
-                    ${this.hass!.localize(
-                      "ui.panel.config.tag.detail.usage",
-                      "companion_link",
-                      html`<a
+                    ${this.hass!.localize("ui.panel.config.tag.detail.usage", {
+                      companion_link: html`<a
                         href="https://companion.home-assistant.io/"
                         target="_blank"
                         rel="noreferrer"
                         >${this.hass!.localize(
                           "ui.panel.config.tag.detail.companion_apps"
                         )}</a
-                      >`
-                    )}
+                      >`,
+                    })}
                   </p>
                 </div>
-                ${this._qrCode
-                  ? html` <div id="qr">${this._qrCode}</div> `
-                  : ""}
+                <div id="qr">
+                  <ha-qr-code
+                    .data=${`${TAG_BASE}${this._params!.entry!.id}`}
+                    center-image="/static/icons/favicon-192x192.png"
+                    error-correction-level="quartile"
+                    scale="5"
+                  >
+                  </ha-qr-code>
+                </div>
               `
             : ``}
         </div>
@@ -143,21 +142,21 @@ class DialogTagDetail
                 ${this.hass!.localize("ui.panel.config.tag.detail.delete")}
               </mwc-button>
             `
-          : html``}
+          : nothing}
         <mwc-button
           slot="primaryAction"
           @click=${this._updateEntry}
-          .disabled=${this._submitting}
+          .disabled=${this._submitting || !this._name}
         >
           ${this._params.entry
             ? this.hass!.localize("ui.panel.config.tag.detail.update")
             : this.hass!.localize("ui.panel.config.tag.detail.create")}
         </mwc-button>
         ${this._params.openWrite && !this._params.entry
-          ? html` <mwc-button
+          ? html`<mwc-button
               slot="primaryAction"
               @click=${this._updateWriteEntry}
-              .disabled=${this._submitting}
+              .disabled=${this._submitting || !this._name}
             >
               ${this.hass!.localize(
                 "ui.panel.config.tag.detail.create_and_write"
@@ -217,36 +216,6 @@ class DialogTagDetail
     }
   }
 
-  private async _generateQR() {
-    const qrcode = await import("qrcode");
-    const canvas = await qrcode.toCanvas(
-      `https://www.home-assistant.io/tag/${this._params!.entry!.id}`,
-      {
-        width: 180,
-        errorCorrectionLevel: "Q",
-        color: {
-          light: "#fff",
-        },
-      }
-    );
-    const context = canvas.getContext("2d");
-
-    const imageObj = new Image();
-    imageObj.src = QR_LOGO_URL;
-    await new Promise((resolve) => {
-      imageObj.onload = resolve;
-    });
-    context.drawImage(
-      imageObj,
-      canvas.width / 3,
-      canvas.height / 3,
-      canvas.width / 3,
-      canvas.height / 3
-    );
-
-    this._qrCode = html`<img src=${canvas.toDataURL()}></img>`;
-  }
-
   static get styles(): CSSResultGroup {
     return [
       haStyleDialog,
@@ -256,6 +225,13 @@ class DialogTagDetail
         }
         #qr {
           text-align: center;
+        }
+        ha-textfield {
+          display: block;
+          margin: 8px 0;
+        }
+        ::slotted(img) {
+          height: 100%;
         }
       `,
     ];

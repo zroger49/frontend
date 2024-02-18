@@ -33,9 +33,10 @@ import type {
   HassEntityBase,
 } from "home-assistant-js-websocket";
 import { supportsFeature } from "../common/entity/supports-feature";
+import { stateActive } from "../common/entity/state_active";
 import { MediaPlayerItemId } from "../components/media-player/ha-media-player-browse";
 import type { HomeAssistant, TranslationDict } from "../types";
-import { UNAVAILABLE_STATES } from "./entity";
+import { isUnavailableState } from "./entity";
 import { isTTSMediaSource } from "./tts";
 
 interface MediaPlayerEntityAttributes extends HassEntityAttributeBase {
@@ -73,30 +74,39 @@ export interface MediaPlayerEntity extends HassEntityBase {
     | "off"
     | "on"
     | "unavailable"
-    | "unknown";
+    | "unknown"
+    | "standby"
+    | "buffering";
 }
 
-export const SUPPORT_PAUSE = 1;
-export const SUPPORT_SEEK = 2;
-export const SUPPORT_VOLUME_SET = 4;
-export const SUPPORT_VOLUME_MUTE = 8;
-export const SUPPORT_PREVIOUS_TRACK = 16;
-export const SUPPORT_NEXT_TRACK = 32;
-export const SUPPORT_TURN_ON = 128;
-export const SUPPORT_TURN_OFF = 256;
-export const SUPPORT_PLAY_MEDIA = 512;
-export const SUPPORT_VOLUME_BUTTONS = 1024;
-export const SUPPORT_SELECT_SOURCE = 2048;
-export const SUPPORT_STOP = 4096;
-export const SUPPORT_PLAY = 16384;
-export const SUPPORT_REPEAT_SET = 262144;
-export const SUPPORT_SELECT_SOUND_MODE = 65536;
-export const SUPPORT_SHUFFLE_SET = 32768;
-export const SUPPORT_BROWSE_MEDIA = 131072;
+export const enum MediaPlayerEntityFeature {
+  PAUSE = 1,
+  SEEK = 2,
+  VOLUME_SET = 4,
+  VOLUME_MUTE = 8,
+  PREVIOUS_TRACK = 16,
+  NEXT_TRACK = 32,
+
+  TURN_ON = 128,
+  TURN_OFF = 256,
+  PLAY_MEDIA = 512,
+  VOLUME_STEP = 1024,
+  SELECT_SOURCE = 2048,
+  STOP = 4096,
+  CLEAR_PLAYLIST = 8192,
+  PLAY = 16384,
+  SHUFFLE_SET = 32768,
+  SELECT_SOUND_MODE = 65536,
+  BROWSE_MEDIA = 131072,
+  REPEAT_SET = 262144,
+  GROUPING = 524288,
+}
 
 export type MediaPlayerBrowseAction = "pick" | "play";
 
 export const BROWSER_PLAYER = "browser";
+
+export type MediaPlayerLayoutType = "grid" | "list" | "auto";
 
 export type MediaClassBrowserSetting = {
   icon: string;
@@ -109,12 +119,13 @@ export const MediaClassBrowserSettings: {
   [type: string]: MediaClassBrowserSetting;
 } = {
   album: { icon: mdiAlbum, layout: "grid" },
-  app: { icon: mdiApplication, layout: "grid" },
+  app: { icon: mdiApplication, layout: "grid", show_list_images: true },
   artist: { icon: mdiAccountMusic, layout: "grid", show_list_images: true },
   channel: {
     icon: mdiTelevisionClassic,
     thumbnail_ratio: "portrait",
     layout: "grid",
+    show_list_images: true,
   },
   composer: {
     icon: mdiAccountMusicOutline,
@@ -131,6 +142,7 @@ export const MediaClassBrowserSettings: {
     icon: mdiTelevisionClassic,
     layout: "grid",
     thumbnail_ratio: "portrait",
+    show_list_images: true,
   },
   game: {
     icon: mdiGamepadVariant,
@@ -138,15 +150,21 @@ export const MediaClassBrowserSettings: {
     thumbnail_ratio: "portrait",
   },
   genre: { icon: mdiDramaMasks, layout: "grid", show_list_images: true },
-  image: { icon: mdiImage, layout: "grid" },
-  movie: { icon: mdiMovie, thumbnail_ratio: "portrait", layout: "grid" },
-  music: { icon: mdiMusic },
+  image: { icon: mdiImage, layout: "grid", show_list_images: true },
+  movie: {
+    icon: mdiMovie,
+    thumbnail_ratio: "portrait",
+    layout: "grid",
+    show_list_images: true,
+  },
+  music: { icon: mdiMusic, show_list_images: true },
   playlist: { icon: mdiPlaylistMusic, layout: "grid", show_list_images: true },
   podcast: { icon: mdiPodcast, layout: "grid" },
   season: {
     icon: mdiTelevisionClassic,
     layout: "grid",
     thumbnail_ratio: "portrait",
+    show_list_images: true,
   },
   track: { icon: mdiFileMusic },
   tv_show: {
@@ -155,7 +173,7 @@ export const MediaClassBrowserSettings: {
     thumbnail_ratio: "portrait",
   },
   url: { icon: mdiWeb },
-  video: { icon: mdiVideo, layout: "grid" },
+  video: { icon: mdiVideo, layout: "grid", show_list_images: true },
 };
 
 export interface MediaPickedEvent {
@@ -210,7 +228,10 @@ export const getCurrentProgress = (stateObj: MediaPlayerEntity): number => {
     (Date.now() -
       new Date(stateObj.attributes.media_position_updated_at!).getTime()) /
     1000.0;
-  return progress;
+  // Prevent negative values, so we do not go back to 59:59 at the start
+  // for example if there are slight clock sync deltas between backend and frontend and
+  // therefore media_position_updated_at might be slightly larger than Date.now().
+  return progress < 0 ? 0 : progress;
 };
 
 export const computeMediaDescription = (
@@ -256,12 +277,12 @@ export const computeMediaControls = (
 
   const state = stateObj.state;
 
-  if (UNAVAILABLE_STATES.includes(state)) {
+  if (isUnavailableState(state)) {
     return undefined;
   }
 
-  if (state === "off") {
-    return supportsFeature(stateObj, SUPPORT_TURN_ON)
+  if (!stateActive(stateObj)) {
+    return supportsFeature(stateObj, MediaPlayerEntityFeature.TURN_ON)
       ? [
           {
             icon: mdiPower,
@@ -273,7 +294,7 @@ export const computeMediaControls = (
 
   const buttons: ControlButton[] = [];
 
-  if (supportsFeature(stateObj, SUPPORT_TURN_OFF)) {
+  if (supportsFeature(stateObj, MediaPlayerEntityFeature.TURN_OFF)) {
     buttons.push({
       icon: mdiPower,
       action: "turn_off",
@@ -285,7 +306,7 @@ export const computeMediaControls = (
 
   if (
     (state === "playing" || state === "paused" || assumedState) &&
-    supportsFeature(stateObj, SUPPORT_SHUFFLE_SET) &&
+    supportsFeature(stateObj, MediaPlayerEntityFeature.SHUFFLE_SET) &&
     useExtendedControls
   ) {
     buttons.push({
@@ -296,7 +317,7 @@ export const computeMediaControls = (
 
   if (
     (state === "playing" || state === "paused" || assumedState) &&
-    supportsFeature(stateObj, SUPPORT_PREVIOUS_TRACK)
+    supportsFeature(stateObj, MediaPlayerEntityFeature.PREVIOUS_TRACK)
   ) {
     buttons.push({
       icon: mdiSkipPrevious,
@@ -307,47 +328,56 @@ export const computeMediaControls = (
   if (
     !assumedState &&
     ((state === "playing" &&
-      (supportsFeature(stateObj, SUPPORT_PAUSE) ||
-        supportsFeature(stateObj, SUPPORT_STOP))) ||
+      (supportsFeature(stateObj, MediaPlayerEntityFeature.PAUSE) ||
+        supportsFeature(stateObj, MediaPlayerEntityFeature.STOP))) ||
       ((state === "paused" || state === "idle") &&
-        supportsFeature(stateObj, SUPPORT_PLAY)) ||
+        supportsFeature(stateObj, MediaPlayerEntityFeature.PLAY)) ||
       (state === "on" &&
-        (supportsFeature(stateObj, SUPPORT_PLAY) ||
-          supportsFeature(stateObj, SUPPORT_PAUSE))))
+        (supportsFeature(stateObj, MediaPlayerEntityFeature.PLAY) ||
+          supportsFeature(stateObj, MediaPlayerEntityFeature.PAUSE))))
   ) {
     buttons.push({
       icon:
         state === "on"
           ? mdiPlayPause
           : state !== "playing"
-          ? mdiPlay
-          : supportsFeature(stateObj, SUPPORT_PAUSE)
-          ? mdiPause
-          : mdiStop,
+            ? mdiPlay
+            : supportsFeature(stateObj, MediaPlayerEntityFeature.PAUSE)
+              ? mdiPause
+              : mdiStop,
       action:
         state !== "playing"
           ? "media_play"
-          : supportsFeature(stateObj, SUPPORT_PAUSE)
-          ? "media_pause"
-          : "media_stop",
+          : supportsFeature(stateObj, MediaPlayerEntityFeature.PAUSE)
+            ? "media_pause"
+            : "media_stop",
     });
   }
 
-  if (assumedState && supportsFeature(stateObj, SUPPORT_PLAY)) {
+  if (
+    assumedState &&
+    supportsFeature(stateObj, MediaPlayerEntityFeature.PLAY)
+  ) {
     buttons.push({
       icon: mdiPlay,
       action: "media_play",
     });
   }
 
-  if (assumedState && supportsFeature(stateObj, SUPPORT_PAUSE)) {
+  if (
+    assumedState &&
+    supportsFeature(stateObj, MediaPlayerEntityFeature.PAUSE)
+  ) {
     buttons.push({
       icon: mdiPause,
       action: "media_pause",
     });
   }
 
-  if (assumedState && supportsFeature(stateObj, SUPPORT_STOP)) {
+  if (
+    assumedState &&
+    supportsFeature(stateObj, MediaPlayerEntityFeature.STOP)
+  ) {
     buttons.push({
       icon: mdiStop,
       action: "media_stop",
@@ -356,7 +386,7 @@ export const computeMediaControls = (
 
   if (
     (state === "playing" || state === "paused" || assumedState) &&
-    supportsFeature(stateObj, SUPPORT_NEXT_TRACK)
+    supportsFeature(stateObj, MediaPlayerEntityFeature.NEXT_TRACK)
   ) {
     buttons.push({
       icon: mdiSkipNext,
@@ -366,7 +396,7 @@ export const computeMediaControls = (
 
   if (
     (state === "playing" || state === "paused" || assumedState) &&
-    supportsFeature(stateObj, SUPPORT_REPEAT_SET) &&
+    supportsFeature(stateObj, MediaPlayerEntityFeature.REPEAT_SET) &&
     useExtendedControls
   ) {
     buttons.push({
@@ -374,8 +404,8 @@ export const computeMediaControls = (
         stateAttr.repeat === "all"
           ? mdiRepeat
           : stateAttr.repeat === "one"
-          ? mdiRepeatOnce
-          : mdiRepeatOff,
+            ? mdiRepeatOnce
+            : mdiRepeatOff,
       action: "repeat_set",
     });
   }
@@ -402,7 +432,13 @@ export const cleanupMediaTitle = (title?: string): string | undefined => {
   }
 
   const index = title.indexOf("?authSig=");
-  return index > 0 ? title.slice(0, index) : title;
+  let cleanTitle = index > 0 ? title.slice(0, index) : title;
+
+  if (cleanTitle.startsWith("http")) {
+    cleanTitle = decodeURIComponent(cleanTitle.split("/").pop()!);
+  }
+
+  return cleanTitle;
 };
 
 /**
@@ -433,18 +469,18 @@ export const handleMediaControlClick = (
           shuffle: !stateObj!.attributes.shuffle,
         }
       : action === "repeat_set"
-      ? {
-          entity_id: stateObj!.entity_id,
-          repeat:
-            stateObj!.attributes.repeat === "all"
-              ? "one"
-              : stateObj!.attributes.repeat === "off"
-              ? "all"
-              : "off",
-        }
-      : {
-          entity_id: stateObj!.entity_id,
-        }
+        ? {
+            entity_id: stateObj!.entity_id,
+            repeat:
+              stateObj!.attributes.repeat === "all"
+                ? "one"
+                : stateObj!.attributes.repeat === "off"
+                  ? "all"
+                  : "off",
+          }
+        : {
+            entity_id: stateObj!.entity_id,
+          }
   );
 
 export const mediaPlayerPlayMedia = (

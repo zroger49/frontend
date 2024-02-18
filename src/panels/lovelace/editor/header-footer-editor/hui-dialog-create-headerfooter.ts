@@ -1,5 +1,5 @@
 import "@material/mwc-button/mwc-button";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../../common/dom/fire_event";
 import { createCloseHeading } from "../../../../components/ha-dialog";
@@ -16,7 +16,7 @@ export class HuiCreateDialogHeaderFooter
   extends LitElement
   implements HassDialog<CreateHeaderFooterDialogParams>
 {
-  @property({ attribute: false }) protected hass!: HomeAssistant;
+  @property({ attribute: false }) public hass!: HomeAssistant;
 
   @state() private _params?: CreateHeaderFooterDialogParams;
 
@@ -32,9 +32,9 @@ export class HuiCreateDialogHeaderFooter
     return true;
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._params) {
-      return html``;
+      return nothing;
     }
 
     return html`
@@ -45,10 +45,11 @@ export class HuiCreateDialogHeaderFooter
           this.hass,
           this.hass!.localize(
             `ui.panel.lovelace.editor.header-footer.choose_header_footer`,
-            "type",
-            this.hass!.localize(
-              `ui.panel.lovelace.editor.header-footer.${this._params.type}`
-            )
+            {
+              type: this.hass!.localize(
+                `ui.panel.lovelace.editor.header-footer.${this._params.type}`
+              ),
+            }
           )
         )}
         @keydown=${this._ignoreKeydown}
@@ -56,26 +57,25 @@ export class HuiCreateDialogHeaderFooter
       >
         <div class="elements">
           ${headerFooterElements.map(
-            (headerFooter, index) =>
-              html`
-                <ha-card
-                  role="button"
-                  tabindex="0"
-                  aria-labeledby=${"card-name-" + index}
-                  outlined
-                  .type=${headerFooter.type}
-                  @click=${this._handleHeaderFooterPicked}
-                  @keyDown=${this._handleHeaderFooterPicked}
-                  dialogInitialFocus
-                >
-                  <ha-svg-icon .path=${headerFooter.icon}></ha-svg-icon>
-                  <div .id=${"card-name-" + index} role="none presentation">
-                    ${this.hass!.localize(
-                      `ui.panel.lovelace.editor.header-footer.types.${headerFooter.type}.name`
-                    )}
-                  </div>
-                </ha-card>
-              `
+            (headerFooter, index) => html`
+              <ha-card
+                role="button"
+                tabindex="0"
+                aria-labelledby=${"card-name-" + index}
+                outlined
+                .type=${headerFooter.type}
+                @click=${this._handleHeaderFooterPicked}
+                @keyDown=${this._handleHeaderFooterPicked}
+                dialogInitialFocus
+              >
+                <ha-svg-icon .path=${headerFooter.icon}></ha-svg-icon>
+                <div .id=${"card-name-" + index} role="none presentation">
+                  ${this.hass!.localize(
+                    `ui.panel.lovelace.editor.header-footer.types.${headerFooter.type}.name`
+                  )}
+                </div>
+              </ha-card>
+            `
           )}
         </div>
         <div slot="primaryAction">
@@ -145,7 +145,7 @@ export class HuiCreateDialogHeaderFooter
         ha-dialog {
           --mdc-dialog-max-width: 550px;
           --dialog-content-padding: 2px 24px 20px 24px;
-          --dialog-z-index: 5;
+          --dialog-z-index: 6;
         }
 
         .elements {

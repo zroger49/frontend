@@ -1,7 +1,8 @@
 import { html, LitElement } from "lit";
-import { customElement, property } from "lit/decorators";
+import { customElement, property, state } from "lit/decorators";
 import memoizeOne from "memoize-one";
 import { fireEvent } from "../../../../../common/dom/fire_event";
+import type { LocalizeFunc } from "../../../../../common/translations/localize";
 import "../../../../../components/ha-form/ha-form";
 import type { SchemaUnion } from "../../../../../components/ha-form/types";
 import { NumericStateCondition } from "../../../../../data/automation";
@@ -15,6 +16,10 @@ export default class HaNumericStateCondition extends LitElement {
 
   @property({ type: Boolean }) public disabled = false;
 
+  @state() private _inputAboveIsEntity?: boolean;
+
+  @state() private _inputBelowIsEntity?: boolean;
+
   public static get defaultConfig() {
     return {
       entity_id: "",
@@ -22,14 +27,17 @@ export default class HaNumericStateCondition extends LitElement {
   }
 
   private _schema = memoizeOne(
-    (entityId) =>
+    (
+      localize: LocalizeFunc,
+      inputAboveIsEntity?: boolean,
+      inputBelowIsEntity?: boolean
+    ) =>
       [
         { name: "entity_id", required: true, selector: { entity: {} } },
         {
           name: "attribute",
           selector: {
             attribute: {
-              entity_id: entityId,
               hide_attributes: [
                 "access_token",
                 "auto_update",
@@ -44,6 +52,8 @@ export default class HaNumericStateCondition extends LitElement {
                 "effect_list",
                 "effect",
                 "entity_picture",
+                "event_type",
+                "event_types",
                 "fan_mode",
                 "fan_modes",
                 "fan_speed_list",
@@ -96,29 +106,92 @@ export default class HaNumericStateCondition extends LitElement {
               ],
             },
           },
-        },
-        {
-          name: "above",
-          selector: {
-            number: {
-              mode: "box",
-              min: Number.MIN_SAFE_INTEGER,
-              max: Number.MAX_SAFE_INTEGER,
-              step: 0.1,
-            },
+          context: {
+            filter_entity: "entity_id",
           },
         },
         {
-          name: "below",
-          selector: {
-            number: {
-              mode: "box",
-              min: Number.MIN_SAFE_INTEGER,
-              max: Number.MAX_SAFE_INTEGER,
-              step: 0.1,
-            },
-          },
+          name: "mode_above",
+          type: "select",
+          required: true,
+          options: [
+            [
+              "value",
+              localize(
+                "ui.panel.config.automation.editor.conditions.type.numeric_state.type_value"
+              ),
+            ],
+            [
+              "input",
+              localize(
+                "ui.panel.config.automation.editor.conditions.type.numeric_state.type_input"
+              ),
+            ],
+          ],
         },
+        ...(inputAboveIsEntity
+          ? ([
+              {
+                name: "above",
+                selector: {
+                  entity: { domain: ["input_number", "number", "sensor"] },
+                },
+              },
+            ] as const)
+          : ([
+              {
+                name: "above",
+                selector: {
+                  number: {
+                    mode: "box",
+                    min: Number.MIN_SAFE_INTEGER,
+                    max: Number.MAX_SAFE_INTEGER,
+                    step: 0.1,
+                  },
+                },
+              },
+            ] as const)),
+        {
+          name: "mode_below",
+          type: "select",
+          required: true,
+          options: [
+            [
+              "value",
+              localize(
+                "ui.panel.config.automation.editor.conditions.type.numeric_state.type_value"
+              ),
+            ],
+            [
+              "input",
+              localize(
+                "ui.panel.config.automation.editor.conditions.type.numeric_state.type_input"
+              ),
+            ],
+          ],
+        },
+        ...(inputBelowIsEntity
+          ? ([
+              {
+                name: "below",
+                selector: {
+                  entity: { domain: ["input_number", "number", "sensor"] },
+                },
+              },
+            ] as const)
+          : ([
+              {
+                name: "below",
+                selector: {
+                  number: {
+                    mode: "box",
+                    min: Number.MIN_SAFE_INTEGER,
+                    max: Number.MAX_SAFE_INTEGER,
+                    step: 0.1,
+                  },
+                },
+              },
+            ] as const)),
         {
           name: "value_template",
           selector: { template: {} },
@@ -127,12 +200,35 @@ export default class HaNumericStateCondition extends LitElement {
   );
 
   public render() {
-    const schema = this._schema(this.condition.entity_id);
+    const inputAboveIsEntity =
+      this._inputAboveIsEntity ??
+      (typeof this.condition.above === "string" &&
+        ((this.condition.above as string).startsWith("input_number.") ||
+          (this.condition.above as string).startsWith("number.") ||
+          (this.condition.above as string).startsWith("sensor.")));
+    const inputBelowIsEntity =
+      this._inputBelowIsEntity ??
+      (typeof this.condition.below === "string" &&
+        ((this.condition.below as string).startsWith("input_number.") ||
+          (this.condition.below as string).startsWith("number.") ||
+          (this.condition.below as string).startsWith("sensor.")));
+
+    const schema = this._schema(
+      this.hass.localize,
+      inputAboveIsEntity,
+      inputBelowIsEntity
+    );
+
+    const data = {
+      mode_above: inputAboveIsEntity ? "input" : "value",
+      mode_below: inputBelowIsEntity ? "input" : "value",
+      ...this.condition,
+    };
 
     return html`
       <ha-form
         .hass=${this.hass}
-        .data=${this.condition}
+        .data=${data}
         .schema=${schema}
         .disabled=${this.disabled}
         @value-changed=${this._valueChanged}
@@ -143,8 +239,19 @@ export default class HaNumericStateCondition extends LitElement {
 
   private _valueChanged(ev: CustomEvent): void {
     ev.stopPropagation();
-    const newTrigger = ev.detail.value;
-    fireEvent(this, "value-changed", { value: newTrigger });
+    const newCondition = ev.detail.value;
+
+    this._inputAboveIsEntity = newCondition.mode_above === "input";
+    this._inputBelowIsEntity = newCondition.mode_below === "input";
+
+    delete newCondition.mode_above;
+    delete newCondition.mode_below;
+
+    if (newCondition.value_template === "") {
+      delete newCondition.value_template;
+    }
+
+    fireEvent(this, "value-changed", { value: newCondition });
   }
 
   private _computeLabelCallback = (

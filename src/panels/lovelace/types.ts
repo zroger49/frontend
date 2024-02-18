@@ -1,12 +1,17 @@
+import { HassEntity } from "home-assistant-js-websocket";
+import { LocalizeFunc } from "../../common/translations/localize";
+import { HaFormSchema } from "../../components/ha-form/types";
+import { LovelaceBadgeConfig } from "../../data/lovelace/config/badge";
+import { LovelaceCardConfig } from "../../data/lovelace/config/card";
 import {
-  LovelaceBadgeConfig,
-  LovelaceCardConfig,
   LovelaceConfig,
-} from "../../data/lovelace";
+  LovelaceRawConfig,
+} from "../../data/lovelace/config/types";
 import { FrontendLocaleData } from "../../data/translation";
 import { Constructor, HomeAssistant } from "../../types";
 import { LovelaceRow, LovelaceRowConfig } from "./entity-rows/types";
 import { LovelaceHeaderFooterConfig } from "./header-footer/types";
+import { LovelaceCardFeatureConfig } from "./card-features/types";
 
 declare global {
   // eslint-disable-next-line
@@ -18,15 +23,14 @@ declare global {
 
 export interface Lovelace {
   config: LovelaceConfig;
-  // If not set, a strategy was used to generate everything
-  rawConfig: LovelaceConfig | undefined;
+  rawConfig: LovelaceRawConfig;
   editMode: boolean;
   urlPath: string | null;
   mode: "generated" | "yaml" | "storage";
   locale: FrontendLocaleData;
   enableFullEditMode: () => void;
   setEditMode: (editMode: boolean) => void;
-  saveConfig: (newConfig: LovelaceConfig) => Promise<void>;
+  saveConfig: (newConfig: LovelaceRawConfig) => Promise<void>;
   deleteConfig: () => Promise<void>;
 }
 
@@ -43,6 +47,19 @@ export interface LovelaceCard extends HTMLElement {
   setConfig(config: LovelaceCardConfig): void;
 }
 
+export interface LovelaceConfigForm {
+  schema: HaFormSchema[];
+  assertConfig?: (config: LovelaceCardConfig) => void;
+  computeLabel?: (
+    schema: HaFormSchema,
+    localize: LocalizeFunc
+  ) => string | undefined;
+  computeHelper?: (
+    schema: HaFormSchema,
+    localize: LocalizeFunc
+  ) => string | undefined;
+}
+
 export interface LovelaceCardConstructor extends Constructor<LovelaceCard> {
   getStubConfig?: (
     hass: HomeAssistant,
@@ -50,6 +67,7 @@ export interface LovelaceCardConstructor extends Constructor<LovelaceCard> {
     entitiesFallback: string[]
   ) => LovelaceCardConfig;
   getConfigElement?: () => LovelaceCardEditor;
+  getConfigForm?: () => LovelaceConfigForm;
 }
 
 export interface LovelaceHeaderFooterConstructor
@@ -86,9 +104,36 @@ export interface LovelaceRowEditor extends LovelaceGenericElementEditor {
   setConfig(config: LovelaceRowConfig): void;
 }
 
-export interface LovelaceGenericElementEditor extends HTMLElement {
+export interface LovelaceGenericElementEditor<C = any> extends HTMLElement {
   hass?: HomeAssistant;
   lovelace?: LovelaceConfig;
+  context?: C;
   setConfig(config: any): void;
   focusYamlEditor?: () => void;
+}
+
+export interface LovelaceCardFeature extends HTMLElement {
+  hass?: HomeAssistant;
+  stateObj?: HassEntity;
+  setConfig(config: LovelaceCardFeatureConfig);
+  color?: string;
+}
+
+export interface LovelaceCardFeatureConstructor
+  extends Constructor<LovelaceCardFeature> {
+  getStubConfig?: (
+    hass: HomeAssistant,
+    stateObj?: HassEntity
+  ) => LovelaceCardFeatureConfig;
+  getConfigElement?: () => LovelaceCardFeatureEditor;
+  getConfigForm?: () => {
+    schema: HaFormSchema[];
+    assertConfig?: (config: LovelaceCardConfig) => void;
+  };
+  isSupported?: (stateObj?: HassEntity) => boolean;
+}
+
+export interface LovelaceCardFeatureEditor
+  extends LovelaceGenericElementEditor {
+  setConfig(config: LovelaceCardFeatureConfig): void;
 }

@@ -1,6 +1,6 @@
 import "@material/mwc-button";
 import { mdiContentCopy, mdiHelpCircle } from "@mdi/js";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 import { fireEvent } from "../../../../common/dom/fire_event";
 import { copyToClipboard } from "../../../../common/util/copy-clipboard";
@@ -13,6 +13,7 @@ import {
   CloudStatusLoggedIn,
   connectCloudRemote,
   disconnectCloudRemote,
+  updateCloudPref,
 } from "../../../../data/cloud";
 import type { HomeAssistant } from "../../../../types";
 import { showToast } from "../../../../util/toast";
@@ -22,19 +23,24 @@ import { showCloudCertificateDialog } from "../dialog-cloud-certificate/show-dia
 export class CloudRemotePref extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public cloudStatus?: CloudStatusLoggedIn;
+  @property({ attribute: false }) public cloudStatus?: CloudStatusLoggedIn;
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this.cloudStatus) {
-      return html``;
+      return nothing;
     }
 
-    const { remote_enabled } = this.cloudStatus.prefs;
+    const { remote_enabled, remote_allow_remote_enable } =
+      this.cloudStatus.prefs;
 
-    const { remote_connected, remote_domain, remote_certificate } =
-      this.cloudStatus;
+    const {
+      remote_connected,
+      remote_domain,
+      remote_certificate,
+      remote_certificate_status,
+    } = this.cloudStatus;
 
-    if (!remote_certificate) {
+    if (!remote_certificate || remote_certificate_status !== "ready") {
       return html`
         <ha-card
           outlined
@@ -43,9 +49,21 @@ export class CloudRemotePref extends LitElement {
           )}
         >
           <div class="preparing">
-            ${this.hass.localize(
-              "ui.panel.config.cloud.account.remote.access_is_being_prepared"
-            )}
+            ${remote_certificate_status === "error"
+              ? this.hass.localize(
+                  "ui.panel.config.cloud.account.remote.cerificate_error"
+                )
+              : remote_certificate_status === "loading"
+                ? this.hass.localize(
+                    "ui.panel.config.cloud.account.remote.cerificate_loading"
+                  )
+                : remote_certificate_status === "loaded"
+                  ? this.hass.localize(
+                      "ui.panel.config.cloud.account.remote.cerificate_loaded"
+                    )
+                  : this.hass.localize(
+                      "ui.panel.config.cloud.account.remote.access_is_being_prepared"
+                    )}
           </div>
         </ha-card>
       `;
@@ -110,6 +128,12 @@ export class CloudRemotePref extends LitElement {
             .path=${mdiContentCopy}
             @click=${this._copyURL}
           ></ha-svg-icon>
+          <ha-formfield .label=${"Allow external activation"}>
+            <ha-switch
+              .checked=${remote_allow_remote_enable}
+              @change=${this._toggleAllowRemoteEnabledChanged}
+            ></ha-switch>
+          </ha-formfield>
         </div>
         <div class="card-actions">
           <mwc-button @click=${this._openCertInfo}>
@@ -144,6 +168,20 @@ export class CloudRemotePref extends LitElement {
     }
   }
 
+  private async _toggleAllowRemoteEnabledChanged(ev) {
+    const toggle = ev.target as HaSwitch;
+
+    try {
+      await updateCloudPref(this.hass, {
+        remote_allow_remote_enable: toggle.checked,
+      });
+      fireEvent(this, "ha-refresh-cloud-status");
+    } catch (err: any) {
+      alert(err.message);
+      toggle.checked = !toggle.checked;
+    }
+  }
+
   private async _copyURL(ev): Promise<void> {
     const url = ev.currentTarget.url;
     await copyToClipboard(url);
@@ -163,18 +201,17 @@ export class CloudRemotePref extends LitElement {
       .header-actions {
         position: absolute;
         right: 24px;
+        inset-inline-end: 24px;
+        inset-inline-start: initial;
         top: 24px;
         display: flex;
         flex-direction: row;
       }
-      :host([dir="rtl"]) .header-actions {
-        right: auto;
-        left: 24px;
-      }
       .header-actions .icon-link {
         margin-top: -16px;
-        margin-inline-end: 8px;
         margin-right: 8px;
+        margin-inline-end: 8px;
+        margin-inline-start: initial;
         direction: var(--direction);
         color: var(--secondary-text-color);
       }
@@ -200,6 +237,9 @@ export class CloudRemotePref extends LitElement {
         --mdc-icon-size: 18px;
         color: var(--secondary-text-color);
         cursor: pointer;
+      }
+      ha-formfield {
+        margin-top: 8px;
       }
     `;
   }

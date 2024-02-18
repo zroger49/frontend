@@ -76,13 +76,12 @@ export class EnergyBatterySettings extends LitElement {
             >
           </p>
           ${batteryValidation.map(
-            (result) =>
-              html`
-                <ha-energy-validation-result
-                  .hass=${this.hass}
-                  .issues=${result}
-                ></ha-energy-validation-result>
-              `
+            (result) => html`
+              <ha-energy-validation-result
+                .hass=${this.hass}
+                .issues=${result}
+              ></ha-energy-validation-result>
+            `
           )}
 
           <h3>
@@ -100,14 +99,14 @@ export class EnergyBatterySettings extends LitElement {
                     ></ha-icon>`
                   : html`<ha-svg-icon .path=${mdiBatteryHigh}></ha-svg-icon>`}
                 <div class="content">
-                  <span
+                  <span class="label"
                     >${getStatisticLabel(
                       this.hass,
                       source.stat_energy_from,
                       this.statsMetadata?.[source.stat_energy_from]
                     )}</span
                   >
-                  <span
+                  <span class="label"
                     >${getStatisticLabel(
                       this.hass,
                       source.stat_energy_to,
@@ -147,6 +146,9 @@ export class EnergyBatterySettings extends LitElement {
 
   private _addSource() {
     showEnergySettingsBatteryDialog(this, {
+      battery_sources: this.preferences.energy_sources.filter(
+        (src) => src.type === "battery"
+      ) as BatterySourceTypeEnergyPreference[],
       saveCallback: async (source) => {
         await this._savePreferences({
           ...this.preferences,
@@ -161,6 +163,9 @@ export class EnergyBatterySettings extends LitElement {
       ev.currentTarget.closest(".row").source;
     showEnergySettingsBatteryDialog(this, {
       source: { ...origSource },
+      battery_sources: this.preferences.energy_sources.filter(
+        (src) => src.type === "battery"
+      ) as BatterySourceTypeEnergyPreference[],
       saveCallback: async (newSource) => {
         await this._savePreferences({
           ...this.preferences,
@@ -212,6 +217,10 @@ export class EnergyBatterySettings extends LitElement {
         .content {
           display: flex;
           flex-direction: column;
+        }
+        .label {
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
       `,
     ];

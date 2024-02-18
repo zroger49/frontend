@@ -92,7 +92,23 @@ enum NodeType {
   "End Node" = 1,
 }
 
-export enum FirmwareUpdateStatus {
+enum RFRegion {
+  "Europe" = 0x00,
+  "USA" = 0x01,
+  "Australia/New Zealand" = 0x02,
+  "Hong Kong" = 0x03,
+  "India" = 0x05,
+  "Israel" = 0x06,
+  "Russia" = 0x07,
+  "China" = 0x08,
+  "USA (Long Range)" = 0x09,
+  "Japan" = 0x20,
+  "Korea" = 0x21,
+  "Unknown" = 0xfe,
+  "Default (EU)" = 0xff,
+}
+
+export enum NodeFirmwareUpdateStatus {
   Error_Timeout = -1,
   Error_Checksum = 0,
   Error_TransmissionFailed = 1,
@@ -106,6 +122,19 @@ export enum FirmwareUpdateStatus {
   OK_WaitingForActivation = 0xfd,
   OK_NoRestart = 0xfe,
   OK_RestartPending = 0xff,
+}
+
+export enum ControllerFirmwareUpdateStatus {
+  // An expected response was not received from the controller in time
+  Error_Timeout = 0,
+  /** The maximum number of retry attempts for a firmware fragments were reached */
+  Error_RetryLimitReached,
+  /** The update was aborted by the bootloader */
+  Error_Aborted,
+  /** This controller does not support firmware updates */
+  Error_NotSupported,
+
+  OK = 0xff,
 }
 
 export interface QRProvisioningInformation {
@@ -149,6 +178,7 @@ export interface ZWaveJSController {
   sdk_version: string;
   type: number;
   own_node_id: number;
+  rf_region: RFRegion | null;
   is_primary: boolean;
   is_using_home_id_from_other_network: boolean;
   is_sis_present: boolean;
@@ -162,7 +192,7 @@ export interface ZWaveJSController {
   supported_function_types: number[];
   suc_node_id: number;
   supports_timers: boolean;
-  is_heal_network_active: boolean;
+  is_rebuilding_routes: boolean;
   inclusion_state: InclusionState;
   nodes: ZWaveJSNodeStatus[];
 }
@@ -176,6 +206,7 @@ export interface ZWaveJSNodeStatus {
   zwave_plus_version: number | null;
   highest_security_class: SecurityClass | null;
   is_controller_node: boolean;
+  has_firmware_update_cc: boolean;
 }
 
 export interface ZwaveJSNodeMetadata {
@@ -188,8 +219,9 @@ export interface ZwaveJSNodeMetadata {
   device_database_url: string;
 }
 
-export interface ZwaveJSNodeComments {
+export interface ZwaveJSNodeAlerts {
   comments: ZWaveJSNodeComment[];
+  is_embedded: boolean | null;
 }
 
 export interface ZWaveJSNodeConfigParams {
@@ -203,6 +235,8 @@ export interface ZWaveJSNodeComment {
 
 export interface ZWaveJSNodeConfigParam {
   property: number;
+  property_key: number | null;
+  endpoint: number;
   value: any;
   configuration_value_type: string;
   metadata: ZWaveJSNodeConfigParamMetadata;
@@ -224,6 +258,7 @@ export interface ZWaveJSSetConfigParamData {
   type: string;
   device_id: string;
   property: number;
+  endpoint: number;
   property_key?: number;
   value: string | number;
 }
@@ -244,9 +279,9 @@ export interface ZWaveJSRefreshNodeStatusMessage {
   stage?: string;
 }
 
-export interface ZWaveJSHealNetworkStatusMessage {
+export interface ZWaveJSRebuildRoutesStatusMessage {
   event: string;
-  heal_node_status: { [key: number]: string };
+  rebuild_routes_status: { [key: number]: string };
 }
 
 export interface ZWaveJSControllerStatisticsUpdatedMessage {
@@ -304,7 +339,7 @@ export interface ZWaveJSNodeStatusUpdatedMessage {
   status: NodeStatus;
 }
 
-export interface ZWaveJSNodeFirmwareUpdateProgressMessage {
+export interface ZWaveJSFirmwareUpdateProgressMessage {
   event: "firmware update progress";
   current_file: number;
   total_files: number;
@@ -315,10 +350,16 @@ export interface ZWaveJSNodeFirmwareUpdateProgressMessage {
 
 export interface ZWaveJSNodeFirmwareUpdateFinishedMessage {
   event: "firmware update finished";
-  status: FirmwareUpdateStatus;
+  status: NodeFirmwareUpdateStatus;
   success: boolean;
   wait_time?: number;
   reinterview: boolean;
+}
+
+export interface ZWaveJSControllerFirmwareUpdateFinishedMessage {
+  event: "firmware update finished";
+  status: ControllerFirmwareUpdateStatus;
+  success: boolean;
 }
 
 export type ZWaveJSNodeFirmwareUpdateCapabilities =
@@ -363,8 +404,6 @@ export interface RequestedGrant {
   /** Whether client side authentication is requested or to be granted */
   clientSideAuth: boolean;
 }
-
-export const nodeStatus = ["unknown", "asleep", "awake", "dead", "alive"];
 
 export const fetchZwaveNetworkStatus = (
   hass: HomeAssistant,
@@ -422,7 +461,8 @@ export const subscribeAddZwaveNode = (
   inclusion_strategy: InclusionStrategy = InclusionStrategy.Default,
   qr_provisioning_information?: QRProvisioningInformation,
   qr_code_string?: string,
-  planned_provisioning_entry?: PlannedProvisioningEntry
+  planned_provisioning_entry?: PlannedProvisioningEntry,
+  dsk?: string
 ): Promise<UnsubscribeFunc> =>
   hass.connection.subscribeMessage((message) => callbackFunction(message), {
     type: "zwave_js/add_node",
@@ -431,6 +471,7 @@ export const subscribeAddZwaveNode = (
     qr_code_string,
     qr_provisioning_information,
     planned_provisioning_entry,
+    dsk,
   });
 
 export const stopZwaveInclusion = (hass: HomeAssistant, entry_id: string) =>
@@ -456,6 +497,17 @@ export const zwaveGrantSecurityClasses = (
     entry_id,
     security_classes,
     client_side_auth,
+  });
+
+export const zwaveTryParseDskFromQrCode = (
+  hass: HomeAssistant,
+  entry_id: string,
+  qr_code_string: string
+) =>
+  hass.callWS<string | null>({
+    type: "zwave_js/try_parse_dsk_from_qr_code_string",
+    entry_id,
+    qr_code_string,
   });
 
 export const zwaveValidateDskAndEnterPin = (
@@ -550,12 +602,12 @@ export const fetchZwaveNodeMetadata = (
     device_id,
   });
 
-export const fetchZwaveNodeComments = (
+export const fetchZwaveNodeAlerts = (
   hass: HomeAssistant,
   device_id: string
-): Promise<ZwaveJSNodeComments> =>
+): Promise<ZwaveJSNodeAlerts> =>
   hass.callWS({
-    type: "zwave_js/node_comments",
+    type: "zwave_js/node_alerts",
     device_id,
   });
 
@@ -572,6 +624,7 @@ export const setZwaveNodeConfigParameter = (
   hass: HomeAssistant,
   device_id: string,
   property: number,
+  endpoint: number,
   value: number,
   property_key?: number
 ): Promise<ZWaveJSSetConfigParamResult> => {
@@ -579,6 +632,7 @@ export const setZwaveNodeConfigParameter = (
     type: "zwave_js/set_config_parameter",
     device_id,
     property,
+    endpoint,
     value,
     property_key,
   };
@@ -598,12 +652,12 @@ export const reinterviewZwaveNode = (
     }
   );
 
-export const healZwaveNode = (
+export const rebuildZwaveNodeRoutes = (
   hass: HomeAssistant,
   device_id: string
 ): Promise<boolean> =>
   hass.callWS({
-    type: "zwave_js/heal_node",
+    type: "zwave_js/rebuild_node_routes",
     device_id,
   });
 
@@ -620,33 +674,33 @@ export const removeFailedZwaveNode = (
     }
   );
 
-export const healZwaveNetwork = (
+export const rebuildZwaveNetworkRoutes = (
   hass: HomeAssistant,
   entry_id: string
 ): Promise<UnsubscribeFunc> =>
   hass.callWS({
-    type: "zwave_js/begin_healing_network",
+    type: "zwave_js/begin_rebuilding_routes",
     entry_id,
   });
 
-export const stopHealZwaveNetwork = (
+export const stopRebuildingZwaveNetworkRoutes = (
   hass: HomeAssistant,
   entry_id: string
 ): Promise<UnsubscribeFunc> =>
   hass.callWS({
-    type: "zwave_js/stop_healing_network",
+    type: "zwave_js/stop_rebuilding_routes",
     entry_id,
   });
 
-export const subscribeHealZwaveNetworkProgress = (
+export const subscribeRebuildZwaveNetworkRoutesProgress = (
   hass: HomeAssistant,
   entry_id: string,
-  callbackFunction: (message: ZWaveJSHealNetworkStatusMessage) => void
+  callbackFunction: (message: ZWaveJSRebuildRoutesStatusMessage) => void
 ): Promise<UnsubscribeFunc> =>
   hass.connection.subscribeMessage(
     (message: any) => callbackFunction(message),
     {
-      type: "zwave_js/subscribe_heal_network_progress",
+      type: "zwave_js/subscribe_rebuild_routes_progress",
       entry_id,
     }
   );
@@ -700,8 +754,17 @@ export const fetchZwaveNodeFirmwareUpdateCapabilities = (
   device_id: string
 ): Promise<ZWaveJSNodeFirmwareUpdateCapabilities> =>
   hass.callWS({
-    type: "zwave_js/get_firmware_update_capabilities",
+    type: "zwave_js/get_node_firmware_update_capabilities",
     device_id,
+  });
+
+export const hardResetController = (
+  hass: HomeAssistant,
+  entry_id: string
+): Promise<string> =>
+  hass.callWS({
+    type: "zwave_js/hard_reset_controller",
+    entry_id,
   });
 
 export const uploadFirmwareAndBeginUpdate = async (
@@ -733,8 +796,9 @@ export const subscribeZwaveNodeFirmwareUpdate = (
   device_id: string,
   callbackFunction: (
     message:
+      | ZWaveJSFirmwareUpdateProgressMessage
+      | ZWaveJSControllerFirmwareUpdateFinishedMessage
       | ZWaveJSNodeFirmwareUpdateFinishedMessage
-      | ZWaveJSNodeFirmwareUpdateProgressMessage
   ) => void
 ): Promise<UnsubscribeFunc> =>
   hass.connection.subscribeMessage(

@@ -2,7 +2,8 @@ import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators";
 import type { DurationSelector } from "../../data/selector";
 import type { HomeAssistant } from "../../types";
-import { HaDurationData } from "../ha-duration-input";
+import type { HaDurationData } from "../ha-duration-input";
+import "../ha-duration-input";
 
 @customElement("ha-selector-duration")
 export class HaTimeDuration extends LitElement {
@@ -28,7 +29,7 @@ export class HaTimeDuration extends LitElement {
         .data=${this.value}
         .disabled=${this.disabled}
         .required=${this.required}
-        ?enableDay=${this.selector.duration.enable_day}
+        ?enableDay=${this.selector.duration?.enable_day}
       ></ha-duration-input>
     `;
   }

@@ -1,13 +1,11 @@
-import { HassEntity, UnsubscribeFunc } from "home-assistant-js-websocket";
-import { html, LitElement, PropertyValues, TemplateResult } from "lit";
+import { HassEntity } from "home-assistant-js-websocket";
+import { html, LitElement, PropertyValues, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import memoizeOne from "memoize-one";
+import { ensureArray } from "../../common/array/ensure-array";
 import type { DeviceRegistryEntry } from "../../data/device_registry";
 import { getDeviceIntegrationLookup } from "../../data/device_registry";
-import {
-  EntityRegistryEntry,
-  subscribeEntityRegistry,
-} from "../../data/entity_registry";
+import { fireEvent } from "../../common/dom/fire_event";
 import {
   EntitySources,
   fetchEntitySourcesWithCache,
@@ -17,16 +15,15 @@ import {
   filterSelectorDevices,
   filterSelectorEntities,
 } from "../../data/selector";
-import { SubscribeMixin } from "../../mixins/subscribe-mixin";
 import { HomeAssistant } from "../../types";
 import "../ha-area-picker";
 import "../ha-areas-picker";
 
 @customElement("ha-selector-area")
-export class HaAreaSelector extends SubscribeMixin(LitElement) {
-  @property() public hass!: HomeAssistant;
+export class HaAreaSelector extends LitElement {
+  @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public selector!: AreaSelector;
+  @property({ attribute: false }) public selector!: AreaSelector;
 
   @property() public value?: any;
 
@@ -40,23 +37,35 @@ export class HaAreaSelector extends SubscribeMixin(LitElement) {
 
   @state() private _entitySources?: EntitySources;
 
-  @state() private _entities?: EntityRegistryEntry[];
-
   private _deviceIntegrationLookup = memoizeOne(getDeviceIntegrationLookup);
 
-  public hassSubscribe(): UnsubscribeFunc[] {
-    return [
-      subscribeEntityRegistry(this.hass.connection!, (entities) => {
-        this._entities = entities.filter((entity) => entity.device_id !== null);
-      }),
-    ];
+  private _hasIntegration(selector: AreaSelector) {
+    return (
+      (selector.area?.entity &&
+        ensureArray(selector.area.entity).some(
+          (filter) => filter.integration
+        )) ||
+      (selector.area?.device &&
+        ensureArray(selector.area.device).some((device) => device.integration))
+    );
+  }
+
+  protected willUpdate(changedProperties: PropertyValues): void {
+    if (changedProperties.has("selector") && this.value !== undefined) {
+      if (this.selector.area?.multiple && !Array.isArray(this.value)) {
+        this.value = [this.value];
+        fireEvent(this, "value-changed", { value: this.value });
+      } else if (!this.selector.area?.multiple && Array.isArray(this.value)) {
+        this.value = this.value[0];
+        fireEvent(this, "value-changed", { value: this.value });
+      }
+    }
   }
 
   protected updated(changedProperties: PropertyValues): void {
     if (
       changedProperties.has("selector") &&
-      (this.selector.area.device?.integration ||
-        this.selector.area.entity?.integration) &&
+      this._hasIntegration(this.selector) &&
       !this._entitySources
     ) {
       fetchEntitySourcesWithCache(this.hass).then((sources) => {
@@ -65,16 +74,12 @@ export class HaAreaSelector extends SubscribeMixin(LitElement) {
     }
   }
 
-  protected render(): TemplateResult {
-    if (
-      (this.selector.area.device?.integration ||
-        this.selector.area.entity?.integration) &&
-      !this._entitySources
-    ) {
-      return html``;
+  protected render() {
+    if (this._hasIntegration(this.selector) && !this._entitySources) {
+      return nothing;
     }
 
-    if (!this.selector.area.multiple) {
+    if (!this.selector.area?.multiple) {
       return html`
         <ha-area-picker
           .hass=${this.hass}
@@ -106,31 +111,29 @@ export class HaAreaSelector extends SubscribeMixin(LitElement) {
   }
 
   private _filterEntities = (entity: HassEntity): boolean => {
-    if (!this.selector.area.entity) {
+    if (!this.selector.area?.entity) {
       return true;
     }
 
-    return filterSelectorEntities(
-      this.selector.area.entity,
-      entity,
-      this._entitySources
+    return ensureArray(this.selector.area.entity).some((filter) =>
+      filterSelectorEntities(filter, entity, this._entitySources)
     );
   };
 
   private _filterDevices = (device: DeviceRegistryEntry): boolean => {
-    if (!this.selector.area.device) {
+    if (!this.selector.area?.device) {
       return true;
     }
 
-    const deviceIntegrations =
-      this._entitySources && this._entities
-        ? this._deviceIntegrationLookup(this._entitySources, this._entities)
-        : undefined;
+    const deviceIntegrations = this._entitySources
+      ? this._deviceIntegrationLookup(
+          this._entitySources,
+          Object.values(this.hass.entities)
+        )
+      : undefined;
 
-    return filterSelectorDevices(
-      this.selector.area.device,
-      device,
-      deviceIntegrations
+    return ensureArray(this.selector.area.device).some((filter) =>
+      filterSelectorDevices(filter, device, deviceIntegrations)
     );
   };
 }

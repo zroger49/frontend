@@ -1,15 +1,14 @@
 import {
-  css,
   CSSResultGroup,
-  html,
   LitElement,
   PropertyValues,
-  TemplateResult,
+  css,
+  html,
+  nothing,
 } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { ifDefined } from "lit/directives/if-defined";
-import { computeStateDisplay } from "../../../common/entity/compute_state_display";
-import { ActionHandlerEvent } from "../../../data/lovelace";
+import { ActionHandlerEvent } from "../../../data/lovelace/action_handler";
 import { HomeAssistant } from "../../../types";
 import { computeTooltip } from "../common/compute-tooltip";
 import { actionHandler } from "../common/directives/action-handler-directive";
@@ -38,9 +37,9 @@ class HuiStateLabelElement extends LitElement implements LovelaceElement {
     return hasConfigOrEntityChanged(this, changedProps);
   }
 
-  protected render(): TemplateResult {
+  protected render() {
     if (!this._config || !this.hass) {
-      return html``;
+      return nothing;
     }
 
     const stateObj = this.hass.states[this._config.entity!];
@@ -61,10 +60,7 @@ class HuiStateLabelElement extends LitElement implements LovelaceElement {
         <hui-warning-element
           label=${this.hass.localize(
             "ui.panel.lovelace.warning.attribute_not_found",
-            "attribute",
-            this._config.attribute,
-            "entity",
-            this._config.entity
+            { attribute: this._config.attribute, entity: this._config.entity }
           )}
         ></hui-warning-element>
       `;
@@ -83,7 +79,7 @@ class HuiStateLabelElement extends LitElement implements LovelaceElement {
         )}
       >
         ${this._config.prefix}${!this._config.attribute
-          ? computeStateDisplay(this.hass.localize, stateObj, this.hass.locale)
+          ? this.hass.formatEntityState(stateObj)
           : stateObj.attributes[this._config.attribute]}${this._config.suffix}
       </div>
     `;
