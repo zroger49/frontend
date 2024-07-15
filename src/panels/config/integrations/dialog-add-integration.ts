@@ -54,6 +54,9 @@ import {
   AddIntegrationDialogParams,
   showYamlIntegrationDialog,
 } from "./show-add-integration-dialog";
+import { getConfigEntries } from "../../../data/config_entries";
+import { stripDiacritics } from "../../../common/string/strip-diacritics";
+import { getStripDiacriticsFn } from "../../../util/fuse";
 
 export interface IntegrationListItem {
   name: string;
@@ -67,6 +70,7 @@ export interface IntegrationListItem {
   cloud?: boolean;
   is_built_in?: boolean;
   is_add?: boolean;
+  single_config_entry?: boolean;
 }
 
 @customElement("dialog-add-integration")
@@ -208,6 +212,7 @@ class AddIntegrationDialog extends LitElement {
             supported_by: integration.supported_by,
             is_built_in: supportedIntegration.is_built_in !== false,
             cloud: supportedIntegration.iot_class?.startsWith("cloud_"),
+            single_config_entry: integration.single_config_entry,
           });
         } else if (
           !("integration_type" in integration) &&
@@ -252,6 +257,7 @@ class AddIntegrationDialog extends LitElement {
           isCaseSensitive: false,
           minMatchCharLength: Math.min(filter.length, 2),
           threshold: 0.2,
+          getFn: getStripDiacriticsFn,
         };
         const helpers = Object.entries(h).map(([domain, integration]) => ({
           domain,
@@ -261,15 +267,16 @@ class AddIntegrationDialog extends LitElement {
           is_built_in: integration.is_built_in !== false,
           cloud: integration.iot_class?.startsWith("cloud_"),
         }));
+        const normalizedFilter = stripDiacritics(filter);
         return [
           ...new Fuse(integrations, options)
-            .search(filter)
+            .search(normalizedFilter)
             .map((result) => result.item),
           ...new Fuse(yamlIntegrations, options)
-            .search(filter)
+            .search(normalizedFilter)
             .map((result) => result.item),
           ...new Fuse(helpers, options)
-            .search(filter)
+            .search(normalizedFilter)
             .map((result) => result.item),
         ];
       }
@@ -570,6 +577,27 @@ class AddIntegrationDialog extends LitElement {
     if (integration.iot_standards) {
       this._pickedBrand = integration.domain;
       return;
+    }
+
+    if (integration.single_config_entry) {
+      const configEntries = await getConfigEntries(this.hass, {
+        domain: integration.domain,
+      });
+      if (configEntries.length > 0) {
+        this.closeDialog();
+        showAlertDialog(this, {
+          title: this.hass.localize(
+            "ui.panel.config.integrations.config_flow.single_config_entry_title"
+          ),
+          text: this.hass.localize(
+            "ui.panel.config.integrations.config_flow.single_config_entry",
+            {
+              integration_name: integration.name,
+            }
+          ),
+        });
+        return;
+      }
     }
 
     if (integration.config_flow) {

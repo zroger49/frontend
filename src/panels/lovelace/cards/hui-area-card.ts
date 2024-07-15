@@ -1,4 +1,3 @@
-import "@material/mwc-ripple";
 import {
   mdiFan,
   mdiFanOff,
@@ -56,7 +55,11 @@ import { SubscribeMixin } from "../../../mixins/subscribe-mixin";
 import { HomeAssistant } from "../../../types";
 import "../components/hui-image";
 import "../components/hui-warning";
-import { LovelaceCard, LovelaceCardEditor } from "../types";
+import {
+  LovelaceCard,
+  LovelaceCardEditor,
+  LovelaceLayoutOptions,
+} from "../types";
 import { AreaCardConfig } from "./types";
 
 export const DEFAULT_ASPECT_RATIO = "16:9";
@@ -102,6 +105,9 @@ export class HuiAreaCard
   }
 
   @property({ attribute: false }) public hass!: HomeAssistant;
+
+  @property({ attribute: false })
+  public layout?: string;
 
   @state() private _config?: AreaCardConfig;
 
@@ -408,25 +414,40 @@ export class HuiAreaCard
     }
 
     const imageClass = area.picture || cameraEntityId;
+
+    const ignoreAspectRatio = this.layout === "grid";
+
     return html`
       <ha-card
         class=${imageClass ? "image" : ""}
         style=${styleMap({
-          paddingBottom: imageClass
-            ? "0"
-            : `${((100 * this._ratio!.h) / this._ratio!.w).toFixed(2)}%`,
+          paddingBottom:
+            ignoreAspectRatio || imageClass
+              ? "0"
+              : `${((100 * this._ratio!.h) / this._ratio!.w).toFixed(2)}%`,
         })}
       >
         ${area.picture || cameraEntityId
-          ? html`<hui-image
-              .config=${this._config}
-              .hass=${this.hass}
-              .image=${area.picture ? area.picture : undefined}
-              .cameraImage=${cameraEntityId}
-              .cameraView=${this._config.camera_view}
-              .aspectRatio=${this._config.aspect_ratio || DEFAULT_ASPECT_RATIO}
-            ></hui-image>`
-          : ""}
+          ? html`
+              <hui-image
+                .config=${this._config}
+                .hass=${this.hass}
+                .image=${area.picture ? area.picture : undefined}
+                .cameraImage=${cameraEntityId}
+                .cameraView=${this._config.camera_view}
+                .aspectRatio=${ignoreAspectRatio
+                  ? undefined
+                  : this._config.aspect_ratio || DEFAULT_ASPECT_RATIO}
+                fitMode="cover"
+              ></hui-image>
+            `
+          : area.icon
+            ? html`
+                <div class="icon-container">
+                  <ha-icon icon=${area.icon}></ha-icon>
+                </div>
+              `
+            : nothing}
 
         <div
           class="container ${classMap({
@@ -526,12 +547,20 @@ export class HuiAreaCard
     forwardHaptic("light");
   }
 
+  getLayoutOptions(): LovelaceLayoutOptions {
+    return {
+      grid_columns: 4,
+      grid_rows: 3,
+    };
+  }
+
   static get styles(): CSSResultGroup {
     return css`
       ha-card {
         overflow: hidden;
         position: relative;
         background-size: cover;
+        height: 100%;
       }
 
       .container {
@@ -557,6 +586,26 @@ export class HuiAreaCard
         height: 100%;
         background-color: var(--sidebar-selected-icon-color);
         opacity: 0.12;
+      }
+
+      .image hui-image {
+        height: 100%;
+      }
+
+      .icon-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .icon-container ha-icon {
+        --mdc-icon-size: 60px;
+        color: var(--sidebar-selected-icon-color);
       }
 
       .sensors {

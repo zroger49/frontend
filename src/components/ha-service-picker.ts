@@ -46,7 +46,7 @@ class HaServicePicker extends LitElement {
     return html`
       <ha-combo-box
         .hass=${this.hass}
-        .label=${this.hass.localize("ui.components.service-picker.service")}
+        .label=${this.hass.localize("ui.components.service-picker.action")}
         .filteredItems=${this._filteredServices(
           this.hass.localize,
           this.hass.services,
@@ -114,11 +114,14 @@ class HaServicePicker extends LitElement {
       if (!filter) {
         return processedServices;
       }
-      return processedServices.filter(
-        (service) =>
-          service.service.toLowerCase().includes(filter) ||
-          service.name?.toLowerCase().includes(filter)
-      );
+      const split_filter = filter.split(" ");
+      return processedServices.filter((service) => {
+        const lower_service_name = service.name.toLowerCase();
+        const lower_service = service.service.toLowerCase();
+        return split_filter.every(
+          (f) => lower_service_name.includes(f) || lower_service.includes(f)
+        );
+      });
     }
   );
 
